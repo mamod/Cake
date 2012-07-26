@@ -1,0 +1,44 @@
+=head1 NAME
+
+Cake - A simple perl web framework
+
+=head1 SYNOPSIS
+
+    use Cake;
+    
+    get '/hello' => sub {
+        
+        my $self = shift;
+        my $c = shift;
+        
+        my $name = $c->param('name');
+        $c->body("Hello ".$name);
+        
+    };
+    
+    ##bake and serve the cake
+    bake->server();
+
+
+=head1 DESCRIPTION
+
+Cake is a mix between Dancer simplicity and Catalyst MVC way, I wanted to name
+it Cancer but since that was a really bad name I went with Cake :)
+
+Cake has zero dependency -- yes -- it requires nothing more than the core modules
+that come with Perl itself, and this was my design decesion from day one, so I had
+to reinvent some wheels and steel some others :)
+
+=head1 Features
+
+Cake apps can be written in one single file, or the catalyst MVC way
+
+Cake apps Can run on any server with standard Perl installation
+
+It comes with a simple template system, something like TT, but we call it Cake-TT
+
+It comes with a simple Database abstraction layer
+
+Cake is also PSGI/Plack friendly by default, no need to change anything to enable
+your app to run under any of the available Plack webservers
+
