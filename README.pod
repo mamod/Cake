@@ -29,6 +29,9 @@ Cake has zero dependency -- yes -- it requires nothing more than the core module
 that come with Perl itself, and this was my design decesion from day one, so I had
 to reinvent some wheels and steel some others :)
 
+PLEASE NOTE that this is a developer release, which mean it's not finished yet and
+I still work on it.
+
 =head1 Features
 
 Cake apps can be written in one single file, or the catalyst MVC way
