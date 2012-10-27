@@ -33,8 +33,68 @@ sub init {
 #=============================================================================
 sub finalize {
     my $self = shift;
+    $self->printDebug();
     return $self;
 }
+
+sub printDebug {
+    my $self = shift;
+    if ($self->debug and my $logs = $self->app->{log}){
+        
+        my $debug = "\n=======================\n";
+        $debug .=   "   DEBUGGING CONSOLE ||\n";
+        $debug .=   _charFormatter('=');
+        $debug .=   "REQUEST PATH : ".$self->path . "\n";
+        $debug .=   _charFormatter('#');
+        $debug .=   _charFormatter(' ');
+        
+        my $i = 0;
+        foreach my $log (@{$logs}){
+            
+            if (ref $log eq "ARRAY"){
+                $log = join "\n",@{$log};
+            }
+            
+            if (ref $log eq 'CODE') {
+                $log = $log->();
+            }
+            
+            if (length($log) > 65){
+                my @logs = unpack("(A62)*", $log);
+                my $last = pop @logs;
+                foreach my $lo (@logs){
+                    $lo .= "->";
+                    $debug .= _printFormatter($lo);
+                }
+                $log = $last;
+            }
+            
+            $debug .= _printFormatter($log);
+            $debug .= _charFormatter(' ');
+            
+        }
+        $debug .=     _charFormatter('#');
+        warn $debug."\n";
+        warn chr("0xAC");
+    }
+    
+    $self->app->{log} = [];
+}
+
+sub _printFormatter {
+    my $text = shift;
+    my $padd = shift || ' ';
+    my $form .= "$text";
+    $form .= $padd x (64 - length($text)) . "#\n";
+    return $form;
+}
+
+sub _charFormatter {
+    my $char = shift;
+    my $multi = shift || 64;
+    return ($char x $multi) . "#\n";
+}
+
 
 #=============================================================================
 # serve output
@@ -306,7 +366,7 @@ sub print_headers {
     my $status_code = 'Status-code: '.$self->status_code;
     
     $headers = Cake::Utils::get_status_code($self->env,$self->status_code);
-    #$headers = "HTTP/1.1 Status: ".$self->status_code."\015\012";
+    $headers = "HTTP/1.1 Status: ".$self->status_code."\015\012";
     
     $headers .= "$content_type_header\015\012";
     

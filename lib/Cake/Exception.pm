@@ -87,22 +87,21 @@ sub error {
 
 
 sub log {
-    
     my $self = shift;
-    
-    if (@_){
-        my $type = shift;
-        my $content = shift;
-        if (ref $content eq 'ARRAY' || exists $self->{'app.log'}->{$type}){
-            push(@{$self->{'app.log'}->{$type}},@{$content});
-        }
+    if (@_ > 1){
+        push @{$self->app->{log}},\@_;
         
-        else{
-            $self->{'app.log'}->{$type} = $content;
-        }
+    } else {
+        push @{$self->app->{log}},shift;
     }
     
-    return $self->{'app.log'};   
+    return $self->{'app.log'};
+}
+
+
+sub warn {
+    my $self = shift;
+    warn shift;    
 }
 
 
