@@ -75,7 +75,6 @@ sub printDebug {
         }
         $debug .=     _charFormatter('#');
         warn $debug."\n";
-        warn chr("0xAC");
     }
     
     $self->app->{log} = [];
