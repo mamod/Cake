@@ -2,7 +2,6 @@ package Cake::Exception;
 use strict;
 use Carp;
 use Data::Dumper;
-our $VERSION = "0.003";
 
 our @CARP_NOT;
 use base 'Exporter';
@@ -10,23 +9,23 @@ use base 'Exporter';
 our @EXPORT = qw(
     error
     log
+    warn
 );
 
 
 ##For quick testing
 BEGIN {
-    $SIG{__DIE__} = \&trapper;
+   $SIG{__DIE__} = \&trapper;
 }
 
-
 sub trapper {
-my $message = shift;
-$message = __PACKAGE__->backtrace($message);
+    my $message = shift;
+    $message = __PACKAGE__->backtrace($message);
 
 print STDOUT <<END;
 Content-Type: text/html
 
-$message
+Dumper $message
 
 END
 }
@@ -43,20 +42,14 @@ sub Mercy_Killing {
 }
 
 sub error {
-    
     my ($self,$error) = @_;
-    
     local @CARP_NOT = qw(Cake);
     
     if ($kill_nicely){
-        ##reset value
         $kill_nicely = 0;
         return;
     }
     
-    $self->status_code(500);
-    
-    #trace caller
     my ($message,$caller);
     
     if (ref $error eq 'HASH'){
@@ -68,21 +61,15 @@ sub error {
     if ($self->debug){
         $error = __PACKAGE__->backtrace($error) if $error;
         local $SIG{__DIE__} = \&handleErrors($self,$error);
-    }
-    
-    else {
-        
+    } else {
         if ($self->app->can('errors')){
             $self->app->errors($self,$error);
-        }
-        
-        else {
+        } else {
+            $self->status_code('404');
             $self->body('something wrong is going on');
         }
     }
-    
     return 1;
-    
 }
 
 
@@ -90,24 +77,30 @@ sub log {
     my $self = shift;
     if (@_ > 1){
         push @{$self->app->{log}},\@_;
-        
     } else {
         push @{$self->app->{log}},shift;
     }
-    
-    return $self->{'app.log'};
+    return 1;
 }
 
 
 sub warn {
     my $self = shift;
-    warn shift;    
+    my $message = shift;
+    my ($caller,$file,$line) = caller;
+    $self->app->{warnings}->{$caller} = [] if !$self->app->{warnings}->{$caller};
+    push @{ $self->app->{warnings}->{$caller} }, {
+        line => $line,
+        message => $message
+    };
+    return 1;
 }
 
 
 sub handleErrors {
     my $self = shift;
     my $message = shift;
+    $self->status_code(500);
     $self->body($message);
     return $self;
 }
@@ -116,8 +109,6 @@ sub handleErrors {
 ########proudly stolen from Dancer :P
 sub backtrace {
     my ($self,$message) = @_;
-
-    
     $message =
       qq|<pre class="error">| . _html_encode($message) . "</pre>";
 

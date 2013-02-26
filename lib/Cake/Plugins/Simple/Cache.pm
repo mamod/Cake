@@ -1,15 +1,12 @@
 package Cake::Plugins::Simple::Cache;
 use Cake 'Plugin';
 use Carp;
-our $VERSION = "0.003";
 
 my $settings;
 my $cacheinstance;
 
 sub _cache {
-    
     $settings = settings if !$settings;   #memoize
-    
     $cacheinstance = Cake::Plugins::Simple::Cache::Base->new(
         cache_root => $settings->{cache_root},
         expire_time => $settings->{expire_time},
@@ -17,19 +14,15 @@ sub _cache {
     );
     
     return $cacheinstance;
-    
 }
 
 sub cache {
-    
     my $self = shift;
-    
     if (@_ > 1 && ref $_[1]){
         return _cache->set(@_);
     }
     
     return _cache->get(@_);
-    
 }
 
 
@@ -57,7 +50,7 @@ package #hide
     Cake::Plugins::Simple::Cache::Base;
     use Digest::MD5 qw(md5_hex);
     use File::Spec;
-    use File::Path qw(mkpath rmtree);
+    use File::Path qw(make_path);
     use Storable qw( retrieve nstore );
     
     
@@ -79,12 +72,10 @@ sub new {
 
 
 sub cache {
-    
     my $self = shift;
     if (@_ > 1 && ref $_[1]){
         return $self->set(@_);
     }
-    
     return $self->get(@_);
 }
 
@@ -99,7 +90,11 @@ sub set {
     ###get file and path
     my ($path,$file) = $self->_get_path_and_file($name,$subfolder);
     my $fullfile = $path.'/'.$file;
-    mkpath( $path, 0, 775 ) if !-d $path;
+    
+    make_path( $path, {
+        mode => 0755
+    }); #if !-d $path;
+    #mkpath( $path, 0, 775 ) if !-d $path;
     
     my $ca = {
         expire_time => $expire_time,
@@ -114,9 +109,7 @@ sub set {
 }
 
 sub get {
-    
     my ($self,$name,$subfolder) = @_;
-    
     if ($subfolder && $subfolder =~ m/^\//){
         $self->{cache_root} = $subfolder;
         $subfolder = '';
@@ -137,22 +130,17 @@ sub get {
         #die $@;
         undef $@;
         return 0;
-    }
-    
-    elsif (time() > $data->{expire_time}){
+    } elsif (time() > $data->{expire_time}){
         return 0;
     }
     
     return $data->{data};
-    
 }
 
 
 sub _get_expire_time {
-    
     my $self = shift;
     my $length = shift;
-    
     return Cake::Utils::to_epoch($length);
 }
 
@@ -164,7 +152,6 @@ sub _get_path_and_file {
     
     ###get folder map
     my @deep;
-    
     my $file = $digest;
     
     push( @deep,
@@ -177,7 +164,6 @@ sub _get_path_and_file {
     #my $x = File::Spec->catfile(@deep, $file);
     my $path = join('/',$cache_root,@deep);
     return ($path,$file);
-    
 }
 
 1;

@@ -14,11 +14,13 @@ sub init {
     ##search down parent packages until we get connection
     my $package = $self;
     my $connect;
+    
+    $connect = $CONNECT->{$self};
     while ( !$connect && $package =~ s/(.*)::// ){
         $connect = $CONNECT->{$1};
     }
     
-    my @connect = $connect ? @{$connect}
+    my @connect = $connect ? ref $connect->[0] eq 'CODE' ? @{ $connect->[0]->($c) } : @{$connect}
     : _con($c);
     
     my $blessed = $self->new(@connect);

@@ -1,4 +1,5 @@
 package Cake::Server::Prefork;
+
 use IO::Socket::INET;
 use strict;
 use Data::Dumper;
@@ -7,7 +8,7 @@ use Cake::Event::Fork;
 use Carp;
 use Cake::URI;
 use constant MAX_PROCESSES => 2;
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 sub new {
     
@@ -93,7 +94,7 @@ sub handle_connection {
         poll => 'read',
         idle => sub {
             $counter++;
-            exit $$ if $counter > 1000;
+            #exit $$ if $counter > 1000;
         },
         callback => sub {
             
@@ -140,7 +141,7 @@ sub process {
     my $event = Cake::Event::Loop->new();
     $event->timer(
         
-        after => 2, #timeout
+        after => 5000, #timeout
         
         callback => sub {
             DEBUG and  warn "Client Time Out\n";
@@ -161,6 +162,7 @@ sub process {
                 
             } elsif (!defined $bytes_read){
                 #on EOF
+                
                 DEBUG and warn "EOF\n";
                 $event->terminate;
             }
@@ -169,7 +171,7 @@ sub process {
     
     $event->loop;
     
-    return -1 if $disconnect;
+    #return -1 if $disconnect;
     
     
     my ($headers,$body) = split /\x0d?\x0a\x0d?\x0a/, $content, 2;

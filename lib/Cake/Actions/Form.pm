@@ -3,15 +3,12 @@ use strict;
 use warnings;
 
 sub execute {
-    
     my $self = shift;
     my ($controller,$c) = @_;
-    
     $self->{_errorMsgs} = ();
     
     ##TODO more tests to add
     my $table = {
-        
         'required' => sub {
             if ($_[0]){
                 return 0;
@@ -83,10 +80,8 @@ sub isSubmitted {
 }
 
 sub errors {
-    
     my $self = shift;
     my $join = shift;
-    
     if ($join){
         return join ($join,@{$self->{_errorMsgs}});
     }
@@ -96,3 +91,6 @@ sub errors {
 
 
 1;
+
+
+__END__

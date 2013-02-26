@@ -65,11 +65,22 @@ sub _dbi {
     elsif ($type eq 'create'){
         my $num = $sth->execute( @{$values} );
         my $id = $dbh->{ q{mysql_insertid}};
+        
+        if (!$id){
+            $id = $dbh->last_insert_id(undef, undef, undef, undef);
+        }
+        
         $sth->finish();
         return $id;
     }
     
     elsif ($type eq 'update'){
+        my $num = $sth->execute( @{$values} );
+        $sth->finish();
+        return $num;
+    }
+    
+    elsif ($type eq 'delete'){
         my $num = $sth->execute( @{$values} );
         $sth->finish();
         return $num;
@@ -168,6 +179,17 @@ sub create {
     return $self->_dbi($sql,\@binds,'create');
 }
 
+sub delete {
+    my $self = shift;
+    my $args = shift;
+    if ($args){
+        croak "Delete Only accept HASH ref" if ref $args ne 'HASH';
+        $self->sql->where($args);
+    }
+    my ($sql,@binds) = $self->sql->delete('DELETE');
+    return $self->_dbi($sql,\@binds,'delete');
+}
+
 sub update {
     my $self = shift;
     my ($sql,@binds) = $self->sql->update(@_);
@@ -192,7 +214,6 @@ sub total {
     return $self->{_total} if $self->{_total};
     
     ###if no limits then return cached numbers
-    
     if (!$limit && $self->{cached_results}){
         $total = scalar @{$self->{cached_results}};
     }
@@ -315,7 +336,7 @@ fetches first matched record and returns it as a hash ref
 
 =head2 first
 
-fetches all matched records and cache them the returns the first record only as a hash ref
+fetches all matched records and cache them then returns the first record only as a hash ref
 
     {
         col => val

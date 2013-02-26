@@ -16,7 +16,7 @@ our @EXPORT = qw(
 
 our $VERSION = '0.004';
 
-# copied from Plack which in return copied it from HTTP::Status
+# copied from Plack which in return copied from HTTP::Status
 my %StatusCode = (
     100 => 'Continue',
     101 => 'Switching Protocols',
@@ -73,7 +73,6 @@ my %StatusCode = (
 );
 
 
-
 =head2 get_file
 
 Get content of a file
@@ -84,16 +83,14 @@ Get content of a file
 
 sub get_file {
     my $file = shift;
-    open CONTENT, '<', $file or croak "Can't open $file for input:\n$!";
+    open my $cont, '<', $file or croak "Can't open $file for input:\n$!";
     local $/;
-    my $content = <CONTENT>;
-    close CONTENT;
+    my $content = <$cont>;
+    close $cont;
     return $content;
 }
 
-
 sub create_file {
-    
     my ($options) = @_;
     my $folder = $options->{folder};
     my $file = $options->{file} || croak "You must provide a file name";
@@ -114,7 +111,6 @@ sub create_file {
     return $file;
 }
 
-
 sub create_folder {
     my $folder = shift;
     if (! -e "$folder") {
@@ -122,10 +118,8 @@ sub create_folder {
     }
 }
 
-
 sub combineHashes {
     my ($hash1,$hash2) = @_;
-    
     while (my($key,$value) = each(%{$hash2})) {
         
         if ($hash1->{$key}){
@@ -139,22 +133,17 @@ sub combineHashes {
             $hash1->{$key} = $value;
         }
     }
-    
     return $hash1;
 }
 
 sub content_length {
-    
     my $body = shift;
-
     return unless defined $body;
-
     if (!ref $body) {
         return length($body);
     } elsif ( ref $body eq 'GLOB' ) {
         return tell($body);
     }
-
     return;
 }
 #============================================================================
@@ -282,7 +271,8 @@ sub random_string {
 }
 
 sub serialize {
-    return Cake::Utils::Serializer->new(@_);
+    shift; #shift cake class
+    return Cake::Utils::Serializer->new(shift);
 }
 #============================================================================
 # Check for persistance

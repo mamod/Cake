@@ -50,7 +50,6 @@ sub _preserv_array {
             push @new,$value;
         } else {
             my $value = shift @array;
-            
             if ($key =~ s/^(-(.*?))/$1/){
                 
                 my $newkey = uc $key;
@@ -63,14 +62,7 @@ sub _preserv_array {
                     #croak 'not defined operator '.$key;
                 }
                 
-            }
-            
-            #elsif (!ref $value && $key !~ /^as$/i && $value !~ /me\./) {
-            #    #push @{$self->{binds}},$value;
-            #    #$value = '?';
-            #}
-            
-            elsif (ref $value eq 'HASH'){
+            } elsif (ref $value eq 'HASH'){
                 $value = $self->_preserv_array(%$value)->[0];
             }
             
@@ -444,8 +436,20 @@ sub query {
     
     my $sql = '';
     
-    $sql = 'SELECT '.$select;
-    $sql .= ' FROM '.$from if defined $from;
+    if ($set && $set eq 'DELETE'){
+        $sql = 'DELETE';
+        if ($from){
+            $from =~ s/AS\s\w+/ /g;
+            $sql .= ' FROM '.$from;
+        }
+        
+    } else {
+        $sql = 'SELECT '.$select;
+        $sql .= ' FROM '.$from if defined $from;
+    }
+    #$sql = $set eq 'DELETE' ? 'DELETE' : 'SELECT '.$select;
+    #$sql .= ' FROM '.$from if defined $from;
+    
     $sql .= ' WHERE '.$where if defined $where;
     $sql .= ' ORDER BY '.$order if $order;
     $sql .= ' LIMIT '.$limit if $limit;
@@ -481,6 +485,14 @@ sub create {
     ." ($columns) VALUES ($x)";
     
     return wantarray ? ($sql,@values) : $sql;
+}
+
+
+#==============================================================================
+# Get delete query
+#==============================================================================
+sub delete {
+    return shift->query('DELETE');
 }
 
 #==============================================================================

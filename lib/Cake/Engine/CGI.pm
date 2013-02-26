@@ -23,7 +23,7 @@ sub init {
     
     for ($path, $query) { s/\#.*$// if length } # dumb clients sending URI fragments
 
-    $self->env->{PATH_INFO}    = URI::Escape::uri_unescape($path);
+    $self->env->{PATH_INFO}    = Cake::URI::uri_decode($path);
     $self->env->{QUERY_STRING} = $query || '';
     ####################
     return $self;

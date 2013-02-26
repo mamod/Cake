@@ -43,6 +43,17 @@ my $REP = qr {
 }x;
 
 my $PROCESS = qr{
+    ($PRE
+    \s*
+    PROCESS
+    \s+
+    .*?
+    \s*
+    $POST)
+}x;
+
+
+my $PROCESS_URL = qr{
     $PRE
     \s*
     PROCESS
@@ -52,7 +63,26 @@ my $PROCESS = qr{
     $POST
 }x;
 
+
+my $MAIN = qr {
+    $PRE
+    \s*
+    main
+    \s*
+    $POST
+}x;
+
 my $INCLUDE = qr{
+    ($PRE
+    \s*
+    INCLUDE
+    \s+
+    .*?
+    \s*
+    $POST)
+}x;
+
+my $INCLUDE_URL = qr{
     $PRE
     \s*
     INCLUDE
@@ -64,6 +94,20 @@ my $INCLUDE = qr{
 
 
 my $SETTINGS = qr{
+    ($PRE
+    \s*			# optional leading whitespace
+    SETTINGS		# required SETTINGS token
+    \s*			# optional whitespace
+    $POST
+    .*?		# grab block content
+    $PRE
+    \s*
+    END
+    \s*
+    $POST)
+}xs;
+
+my $SETTINGS_CONTENT = qr{
     $PRE
     \s*			# optional leading whitespace
     SETTINGS		# required SETTINGS token
@@ -79,8 +123,12 @@ my $SETTINGS = qr{
 
 =head1 Name
 
-Cake::View::TTT
-    
+Cake::View::TT
+
+=cut
+
+=head1 SYNOPSIS
+
     use Cake::View::TT;
     
     my $temp = Cake::View::TT->new({
@@ -101,13 +149,12 @@ Cake::View::TTT
 =cut
 
 my $DEBUG = 0;
-sub DEBUG{$DEBUG};
+sub DEBUG {$DEBUG};
 
 sub new {
     
     my $class = shift;
     my $options = shift;
-    
     croak "You have to specify full path of your templat files location"
     if !$options->{path};
     
@@ -159,7 +206,7 @@ sub render {
         
         ##better error handling
         if (DEBUG && $@){
-            die {
+            die Dumper {
                 content => $self->{current}->{content},
                 file => $self->{current}->{file},
                 pos => $self->{current}->{pos},
@@ -224,6 +271,9 @@ sub loadMatches {
     }
     
     $self->{temp} = $temp;
+    
+    return ref $self->{matches} eq 'ARRAY' ? @{$self->{matches}} : ();
+    
     return @{$self->{matches}};
 }
 
@@ -232,7 +282,6 @@ sub load {
     
     my ($self,$file) = @_;
     my ($data);
-    
     local $/;
     
     $file = $self->{path}."/$file";
@@ -242,24 +291,93 @@ sub load {
         close($fh);
         
         my @files;
+        $data =~ s/$MAIN/{{ main }}/g;
+        
+        my $counter = 0;
+        while (my ($settings,$include,$process,$code,$var) = $data =~ m{$SETTINGS|$INCLUDE|$PROCESS|$CODE|$VAR}){
+            $counter++;
+            if ($counter > 1000){
+                die "recrusive loop $process";
+            }
+            
+            my $length = $+[0] - $-[0];
+            my $start = $-[0];
+            
+            if ($code || $var){
+                my $content = $code || $var;
+                push @{$self->{matches}},{
+                    index => ++$self->{i},
+                    content => $content,
+                    start => $start,
+                    from => $code ? 'CODE' : 'VAR',
+                    file => $file
+                };
+                substr ($data,$start,$length,"{{ $self->{i} }}");
+            } elsif ($process){
+                my ($url) = $process =~ m/$PROCESS_URL/g;
+                substr ($data,$start,$length,$self->load($url));
+            } elsif($settings){
+                my ($content) = $settings =~ m/$SETTINGS_CONTENT/g;
+                substr ($data,$start,$length,$self->settings($content));
+            } elsif ($include){
+                my ($url) = $include =~ m/$INCLUDE_URL/g;
+                push @files,$url;
+                substr ($data,$start,$length,'{{% INC %}}');
+            }
+        }
+        
+        foreach my $f (@files){
+            $data =~ s{\{\{% INC %\}\}}{ { $self->load($f) }}e;
+        }
+        
+        return $data;
+    }
+    
+    else {
+        croak "Can't open file $file: $!";
+    }
+}
+
+
+sub loadx {
+    
+    my ($self,$file) = @_;
+    my ($data);
+    local $/;
+    
+    $file = $self->{path}."/$file";
+    
+    if (open(my $fh,'<',$file)) {
+        $data = <$fh>;
+        close($fh);
+        
+        my @files;
+        $data =~ s/$MAIN/{{ main }}/g;
         while ($data =~ s{$SETTINGS}{ { $self->settings($1) }}e){};
         while ($data =~ s{$PROCESS}{ { $self->load($1) }}e){};
         while ($data =~ s{$INCLUDE}{ { '{{% INC %}}' }}e){
             push @files,$1;
         };
         
-        while (my ($m1,$m2,$m3) = $data =~ m{$CODE|$VAR}){
+        my $counter = 0;
+        while (my ($m1,$m2) = $data =~ m{$CODE|$VAR}){
+            $counter++;
+            if ($counter > 10000){
+                #die "recrusive loop";
+            }
+            
+            my $length = $+[0] - $-[0];
+            my $start = $-[0];
+            
             my $content = $m1 || $m2;
             push @{$self->{matches}},{
                 index => ++$self->{i},
                 content => $content,
-                start => $-[0],
+                start => $start,
                 from => $m1 ? 'CODE' : 'VAR',
                 file => $file
             };
-            
-            my $length = $+[0] - $-[0];
-            substr ($data,$-[0],$length,"{{ $self->{i} }}");
+            substr ($data,$start,$length,"{{ $self->{i} }}");
         }
         
         foreach my $f (@files){
@@ -279,11 +397,15 @@ sub settings {
     my $self = shift;
     my $settings = shift;
     my @settings = split "\n",$settings;
-    
+    #die Dumper \@settings;
     map {
-        my ($m,$m2) = $_ =~ m/\s*(.*?)\s*:\s*(.*?)\s*/;
-        if ($m eq 'layout'){
-            $self->{layout} = $m2;
+        my ($m,$m2) = $_ =~ m/\s*(.*?)\s*:\s*(.*)\s*/g;
+        if ($m){
+            if ($m eq 'layout'){
+                $self->{layout} = $m2;
+            }else {
+                $self->{obj}->{$m} = $self->setVar($m2,'eval') || $m2;
+            }
         }
     } @settings;
     
@@ -361,14 +483,5 @@ package Cake::View::Object;
 1;
 
 __END__
-
-
-=head1 NAME
-
-Cake::View::TT
-
-=head1 STNOPSIS
-
-=head1 DESCRIPTION
 
 

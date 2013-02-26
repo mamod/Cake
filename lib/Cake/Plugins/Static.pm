@@ -1,7 +1,6 @@
 package Cake::Plugins::Static;
 use Cake 'Plugin';
 use Carp;
-our $VERSION = "0.002";
 
 my $map = {
     'js' => 'text/javascript',
@@ -19,11 +18,16 @@ my $time = time();
 sub setup {
     
     my $self = shift;
-    
     my $settings = settings();
     
     ####static path
     my $dir = $settings->{dir};
+    if (!$dir){
+        $self->warn("***Please specify a static path when using Cake::Plugins::Static");
+        $self->warn("***Ex: 'Static'=>{dir=>'/path/to/static/folder'}");
+        return $self->NEXT::setup();
+    }
+    
     
     ##get last folder
     $dir =~ s/(.*)\/(.*?)$/$1/;
@@ -39,12 +43,11 @@ sub setup {
         ##simple Etag caching
         my $hex = $time.$file;
         $hex =~ s/(.)/sprintf("%x",ord($1))/eg;
-        if ($self->request_header('IF_NONE_MATCH') && $self->request_header('IF_NONE_MATCH') eq $hex){
-            $self->status_code('304');
-            #$self->push_header("Etag: $hex");
-            $self->body('');
-            return 1;
-        }
+        #if ($self->request_header('IF_NONE_MATCH') && $self->request_header('IF_NONE_MATCH') eq $hex){
+        #    $self->status_code('304');
+        #    $self->body('');
+        #    return 1;
+        #}
         
         my $data = '';
         
@@ -53,7 +56,6 @@ sub setup {
             if ($ext =~ /png|gif|jpg/i){
                 binmode $fh;
             }
-            
             $data = do { local $/; <$fh> };
             close($fh);
         }
@@ -62,23 +64,19 @@ sub setup {
             $self->content_type('text/plain');
             $self->status_code('404');
             $self->body('File Doesn\'t Exists');
+            $self->log("Static File $path not found");
             return 1;
         }
         
+        $self->log("Serving Static File $path");
         $self->content_type($content_type);
         $self->push_header("Etag: $hex");
         $self->body($data);
         return 1;
         
-    }
-    
-    
-    else {
+    } else {
         $self->NEXT::setup();
     }
-    
-    
-    
 }
 
 
@@ -96,7 +94,7 @@ Cake::Plugins::Static
 
 head1 DESCRIPTION
 
-Server static files from cake apps - this is very basic static file plugin
+Serve static files from cake apps - this is very basic static file plugin
 
 head1 SYNOPSIS
 

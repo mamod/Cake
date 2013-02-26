@@ -7,11 +7,10 @@ use Carp;
 use Data::Dumper;
 use XML::Simple;
 use Cake::Event::Fork;
-use File::Map 'map_file';
 
 use constant 'Size' => 1024;
 use constant 'MaxBuff' => Size * 2;
-use constant 'DEBUG' => 0;
+use constant 'DEBUG' => 1;
 
 
 sub size {  return shift->{size} }
@@ -62,7 +61,7 @@ sub collection {
     my $file = $self->getFile;
     
     
-    open my $fh2,'+<',$file or die $!;
+    open my $fh2,'+<',$file or die $!. " ".$file;
     
     open my $fh1,'<',$file or die $!;
     open my $temp_fh, '>>', '/xampp/htdocs/CakeBlog/files/test/_temp.txt';

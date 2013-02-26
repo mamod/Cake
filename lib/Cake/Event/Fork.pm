@@ -92,7 +92,6 @@ sub wait_all {
     
     #return if $self->{childs_count} < $self->{max};
     return $self if $self->{max} && $self->{max} > $self->count;
-    
     while ($self->count){
         $self->wait_one;
     }

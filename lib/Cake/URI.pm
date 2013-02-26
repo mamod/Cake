@@ -10,8 +10,6 @@ our @EXPORT = qw(
     subdomains
 );
 
-our $VERSION = '0.004';
-
 sub uri_encode {
     return '' if !$_[0];
     $_[0] =~ s/([^A-Za-z0-9])/sprintf("%%%02X", ord($1))/seg;
@@ -58,7 +56,6 @@ sub get_full_url {
     
     my $self = shift;
     
-    
     my $path = '';
     my $params = {};
     my $url = $self->base;
@@ -75,13 +72,9 @@ sub get_full_url {
         
         if ($path =~ /^http/){
             $url = $path;
-        }
-        
-        elsif ($path =~ /^\//){
+        } elsif ($path =~ /^\//){
             $url .= $path;
-        }
-        
-        else {
+        } else {
             $url .= lc $self->action->{namespace}
             .'/'.$path;
         }
@@ -95,9 +88,7 @@ sub get_full_url {
         foreach my $arg (@{$args}){
             $url .= '/'.$arg;
         }
-    }
-    
-    if (ref $_[0] eq 'HASH') {
+    } elsif (ref $_[0] eq 'HASH') {
         $params = shift;
     }
     

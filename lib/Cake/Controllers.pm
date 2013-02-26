@@ -8,19 +8,19 @@ our @EXPORT = qw(
     auto_chain
 );
 
-our $VERSION = '0.003';
-
 my $dispatch = bless ({},__PACKAGE__);
 my $auto_chain = {};
 my @methods = ('get','post','delete','put');
 
 sub dispatcher {$dispatch}
 sub auto_chain {$auto_chain}
+
+
 ##returns last added controller action
 sub Action { return shift->{lastAction}; }
 sub Path { return shift->{path}; }
 #----------------------------------------------------------------------------
-# FIXME::::: just fix me no need to explain :)
+# FIXME::: Not sure what should be fixed here
 #----------------------------------------------------------------------------
 sub dispatch {
     
@@ -67,21 +67,15 @@ sub dispatch {
             eval "require '$req'";
         }
         
-        $caller = $controller;
-        
+        $caller = $controller;   
     }
-    
     
     if (ref $path eq 'Regexp'){
         $abs_path = qr{$path};
-    }
-    
-    #for absolute paths
-    elsif ($path =~ m/^\//){
+    } elsif ($path =~ m/^\//){
+        #for absolute paths
         $abs_path = lc($path);
-    }
-    
-    else {
+    } else {
         
         ($namespace) = $caller =~ m/Controllers(::.*)$/;
         
@@ -90,7 +84,6 @@ sub dispatch {
             $abs_path = lc($namespace.'/');
         } else {
             $abs_path = '/';
-            
         }
         
         $abs_path .= lc($path);
@@ -125,21 +118,16 @@ sub dispatch {
             methods => \@types,
             action => $dispatch->{lastAction}
         });
-    }
-    
-    else {
+    } else {
         
         my $actions;
         my $first_method = '';
         
         #one reference for all methods
         foreach my $method (@types){
-            
             if ($actions->{$first_method}){
                 $actions->{$method} = $actions->{$first_method};
-            }
-            
-            else {
+            } else {
                 $actions->{$method} = $dispatch->{lastAction};
                 $first_method = $method;
             }
@@ -147,15 +135,11 @@ sub dispatch {
         
         if ($dispatch->{$nPath}){
             $dispatch->{$nPath} = {%{$dispatch->{$nPath}},%{$actions}};
-        }
-        
-        else {
+        } else {
             $dispatch->{$nPath} = $actions;
         }
     }
 }
-
-
 
 sub auto {
     
@@ -167,10 +151,7 @@ sub auto {
         code => $code,
         line => $line
     };
-    
 }
-
-
 
 sub clear {
     $dispatch = {};

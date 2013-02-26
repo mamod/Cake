@@ -3,14 +3,11 @@ use strict;
 use warnings;
 use Carp;
 use IO::File;
-our $VERSION = "0.011";
+my $UPLOADS = {};
 
 sub init {
-    
     my $self = shift;
-    
     my $uri = $self->env->{'REQUEST_URI'};
-    
     my($path, $query) = ( $uri =~ /^([^?]*)(?:\?(.*))?$/s );
     
     ##remove script name from path info
@@ -18,12 +15,9 @@ sub init {
     $path =~ s/^$script//;
     
     #for ($path, $query) { s/\#.*$// if length } # dumb clients sending URI fragments
-
     $self->env->{PATH_INFO}    = Cake::URI::uri_decode($path);
     $self->env->{QUERY_STRING} = $query || '';
-    
     $self->engine(bless {}, __PACKAGE__);
-    
 }
 
 #BEGIN { open (STDERR, ">>/xampp/htdocs/CakeBlog/error.txt"); }
@@ -33,18 +27,26 @@ sub init {
 #=============================================================================
 sub finalize {
     my $self = shift;
-    $self->printDebug();
+    $self->printConsole();
     return $self;
 }
 
-sub printDebug {
+#=============================================================================
+# console debugging
+#=============================================================================
+sub printConsole {
     my $self = shift;
-    if ($self->debug and my $logs = $self->app->{log}){
+    return if !$self->debug;
+    if (my $logs = $self->app->{log}){
         
         my $debug = "\n=======================\n";
         $debug .=   "   DEBUGGING CONSOLE ||\n";
         $debug .=   _charFormatter('=');
-        $debug .=   "REQUEST PATH : ".$self->path . "\n";
+        $debug .=   "REQUEST PATH   : ".$self->path . "\n";
+        $debug .=   "REQUEST METHOD : ".$self->method . "\n";
+        
+        ##log request params
+        
         $debug .=   _charFormatter('#');
         $debug .=   _charFormatter(' ');
         
@@ -53,9 +55,7 @@ sub printDebug {
             
             if (ref $log eq "ARRAY"){
                 $log = join "\n",@{$log};
-            }
-            
-            if (ref $log eq 'CODE') {
+            } elsif (ref $log eq 'CODE') {
                 $log = $log->();
             }
             
@@ -71,12 +71,38 @@ sub printDebug {
             
             $debug .= _printFormatter($log);
             $debug .= _charFormatter(' ');
-            
         }
         $debug .=     _charFormatter('#');
         warn $debug."\n";
     }
     
+    if (my $warnings = delete $self->app->{warnings}){
+        use Data::Dumper;
+        my $warn = "\n=======================\n";
+        $warn .=   "   WARNING CONSOLE   ||\n";
+        $warn .=   _charFormatter('=');
+        my $count = 0;
+        foreach my $key (keys %{$warnings}){
+            $warn .=   _charFormatter('-');
+            $warn .=   "CALLER  =>  ". $key . "\n";
+            $warn .=   "WARNS  =>  ". scalar @{ $warnings->{$key} } . "\n";
+            $warn .=   _charFormatter('-');
+            for (@{ $warnings->{$key} }){
+                $count++;
+                $warn .=  "Message: ". $_->{message} ."\n";
+                $warn .=  "Line: ". $_->{line} ."\n\n";
+            }
+            
+            $warn .= "\n";
+        }
+        
+        $warn .=   _charFormatter('#');
+        my $str = "# TOTAL WARNINGS : $count   ";
+        $warn .=   _printFormatter($str);
+        $warn .=   _charFormatter('#');
+        
+        warn $warn;
+    }
     $self->app->{log} = [];
 }
 
@@ -104,13 +130,10 @@ sub serve {
     my $type = shift;
     
     if ($type){
-        
         return $self->serve_as_psgi if uc $type eq 'PSGI';
-        
         if (ref $type eq 'CODE'){
             return $type->($self,$self->env->{client});
         }
-        
         $self->Require($type,'');
         
         {
@@ -176,12 +199,8 @@ sub _multipart_parameters {
     my $boundary = shift;
     
     my $CRLF = $self->crlf;
-    
     $boundary = '--'.$boundary;
-    
-    if ($params =~ s/$CRLF$boundary--//g){
-        #return 'ok';
-    }
+    $params =~ s/$CRLF$boundary--//g;
     
     my @params = split($boundary.$CRLF,$params);
     
@@ -192,16 +211,13 @@ sub _multipart_parameters {
         
         ##remove first line
         $field =~ s/^$CRLF//;
-      
+        
         ##remove last blank
         $field =~ s/$CRLF$//;
         
         ##split on first 2 line breaks
         my ($header,$content) = split(/$CRLF$CRLF/,$field,2);
-        
-        if (!$header){
-            next;
-        }
+        next if !$header;
         
         ##split header on line break
         my ($name,$filename,$contenttype) =
@@ -213,7 +229,7 @@ sub _multipart_parameters {
         
         my $fh;
         if($filename){
-            
+            #make sure the file name is safe
             $fh = IO::File->new("> /xampp/htdocs/CakeBlog/$filename");
             if (defined $fh) {
                 binmode($fh);
@@ -225,6 +241,7 @@ sub _multipart_parameters {
             $self->{uploads}->{$name} = {
                 'filehandle' => $handle,
                 'filename' => $filename,
+                'path' => '',
                 'content-type' => $contenttype
             };
             
@@ -237,6 +254,31 @@ sub _multipart_parameters {
     my $query = join('&',@query);
     return $self->_parse_parameters($query);
 }
+
+
+
+#=============================================================================
+# XXX - TODO return uploads info & file handle
+#=============================================================================
+sub uploads {
+    
+    my $self = shift;
+    
+    #didn't parse params yet 
+    unless (defined $self->{'params'}){
+        $self->parameters();
+    }
+    
+    return {} if !$self->{uploads};
+    return $self->{uploads};
+}
+
+sub upload {
+    
+    
+    
+}
+
 
 #=============================================================================
 # return processed parameters
@@ -289,24 +331,6 @@ sub _parse_parameters {
     }
     
     return $params;
-}
-
-
-
-#=============================================================================
-# XXX - TODO return uploads info & file handle
-#=============================================================================
-sub uploads {
-    
-    my $self = shift;
-    
-    #didn't parse params yet 
-    unless (defined $self->{'params'}){
-        $self->parameters();
-    }
-    
-    return {} if !$self->{uploads};
-    return $self->{uploads};
 }
 
 #serve content as psgi

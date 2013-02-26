@@ -16,7 +16,7 @@ use Cake::URI;
 use base qw/Exporter Cake::Dispatcher Cake::Engine/;
 use FindBin qw($Bin);
 
-our $VERSION = '1.005';
+our $VERSION = '1.006';
 
 my @controller_export = qw(
     get
@@ -30,6 +30,7 @@ my @controller_export = qw(
 );
 
 my @plugin_export = qw(
+    loadSettings
     settings
     register
 );
@@ -44,25 +45,13 @@ our @EXPORT = (@controller_export,@plugin_export,@extra_export);
 
 __PACKAGE__->Accessor('env','app','engine','action','stash','uri');
 
-my ($DEBUG,$ENGINE);
-my $SELF;
+my ($DEBUG,$ENGINE,$SELF);
 my $SETTINGS = {};
 my $COUNTER = 0;
-
-#============================================================================
-# Helper functions
-#============================================================================
-sub context {
-    my $caller = shift;
-    $ENV{'REQUEST_URI'} = shift || '';
-    $ENV{SCRIPT_NAME} = (caller)[0] || '';
-    return $caller->bake();
-}
 
 sub clear_counter {$COUNTER = 0}
 sub counter {$COUNTER}
 sub debug {return $DEBUG;}
-
 #============================================================================
 # import on app start
 #============================================================================
@@ -89,7 +78,7 @@ sub import {
             return;
         }
         
-        # Import engine
+        # Import engine, load only one engine
         if ( /^:Engine=(\S+)/ && !$ENGINE) {
             $ENGINE = $1;
             $engine = Cake::Utils::Require($ENGINE,'Cake::Engine');
@@ -105,24 +94,48 @@ sub import {
     if (!$SELF){
         $SELF->{'basename'} = $package;
         $package .='.pm';
-        ($SELF->{'dir'} = $INC{$package} || $Bin) =~ s/\.pm//;
+        
+        #print Dumper \%INC;
+        
+        ( $SELF->{'dir'} = $INC{$package} || $Bin) =~ s/\.pm//;
         push @INC, $SELF->{'dir'};
     }
     
     $class->export_to_level(1, $class, @EXPORT);
 }
 
+
+#============================================================================
+# Load Settings from outer file / must be a valid json file
+#============================================================================
+sub loadSettings {
+    my $file = shift;
+    my $conf;
+    eval {
+        $conf = Cake::Utils::get_file($file);
+    }; if ($@){
+        die "can't open file $file";
+    }
+    ##json to perl
+    return Cake::Utils->serialize($conf)->to_perl;
+}
+
 #============================================================================
 # settings : get/set application Settings
 #============================================================================
 sub settings {
-    
-    if (@_ > 1 || ref $_[0]){
+    if (@_ > 1 || ref $_[0] eq 'HASH'){
         if (!ref $_[0]){
             my $package = shift;
-            $SETTINGS->{$package} = {@_};
+            $SETTINGS->{$package} = @_ > 1 ? {@_} : $_[0];
         } else {
-            $SETTINGS = $_[0];
+            $SETTINGS = {%{$SETTINGS},%{$_[0]}};
+            
+            if (my $plugins = delete $SETTINGS->{plugins}){
+                if (ref $plugins eq 'ARRAY'){
+                    &plugins($plugins);
+                }
+            }
         }
     } else {
         my $package = $_[0] || caller;
@@ -133,7 +146,6 @@ sub settings {
 }
 
 sub config {
-    
     my $self = shift;
     if ($_[0]){
         return $self->{settings}->{$_[0]};
@@ -166,6 +178,17 @@ sub plugins {
     $SETTINGS = {%{$SETTINGS},%{$withOptions}};
 }
 
+#============================================================================
+# Cake Context
+#============================================================================
+sub context {
+    my $caller = shift;
+    #$ENV{'REQUEST_URI'} = shift || '';
+    $ENV{SCRIPT_NAME} = (caller)[0] || '';
+    my $c = $caller->bake($_[0],1);
+    $c->finalize();
+    return $c;
+}
 
 #============================================================================
 # bakery: bake the cake
@@ -174,17 +197,27 @@ sub bake {
     
     my $class = shift;
     my $self = bless({}, __PACKAGE__);
-    ###FIXME: internal use of some global captured things!!!?
+    
+    ##load settings
     $self->app(bless($SELF, $class));
     $self->{pid} = $$;
     $self->env(bless($_[0] || \%ENV, 'Cake::ENV'));
     $self->{COUNT} = $COUNTER;
     $self->{response}->{headers} = ["X-Framework: PerlCake"];
     $self->{settings} = $SETTINGS;
-    $self->loadControllers();
-    return $self->_runner();
+    $self->loadOnce();
+    return $self->_runner() if !$_[1];
+    print Dumper caller(2);
+    return $self;
 }
 
+
+sub loadOnce {
+    my $self = shift;
+    return if $COUNTER;
+    $self->loadControllers();
+    $self->cando();
+}
 
 #============================================================================
 # run app
@@ -192,25 +225,20 @@ sub bake {
 sub _runner {
     
     my $self = shift;
-    
     local $SIG{__DIE__};
     
     eval {
-        
         $self->init();
-        
-        if ($self->app->can('begin')){
+        if ($self->app->{can}->{begin}){
             $self->app->begin($self);
         }
         
         ++$self->{_count};
         croak('Infinte Loop Detected') if $self->{_count} > '20';
         $self->setup();
-        
-        if ($self->app->can('end')){
+        if ($self->app->{can}->{end}){
             $self->app->end($self);
         }
-        
         $self->finalize();
     };
     
@@ -228,6 +256,7 @@ sub _runner {
 #============================================================================
 sub DESTROY {
     my $self = shift;
+    return if !$self->{pid};
     return if $$ != $self->{pid};
     if ( exists $self->{on_destroy} ){
         map {
@@ -244,8 +273,9 @@ sub DESTROY {
 sub loadControllers {
     return if $COUNTER;
     my $self = shift;
-    my $dir = $self->app->{'dir'}.'/Controllers';
     
+    my $dir = $self->app->{'dir'}.'/Controllers';
+    #warn Dumper $dir;
     return if !-d $dir;
     
     find(sub {
@@ -261,6 +291,18 @@ sub loadControllers {
     }, $dir);
 }
 
+
+sub cando {
+    my $self = shift;
+    $self->app->{can} = {
+        begin => $self->app->can('begin') ? 1 : undef,
+        end => $self->app->can('end') ? 1 : undef,
+        error => $self->app->can('error') ? 1 : undef,
+        notfound => $self->app->can('notfound') ? 1 : undef
+    };
+}
+
+
 #============================================================================
 # load app model
 #============================================================================
@@ -275,16 +317,17 @@ sub model {
     
     require "$module";
     $model = $self->app->{'basename'}."::Model::".$model;
-    my $blessed = bless({
-        c => $self
-    },$model);
     
     my $return;
     eval {
         $return = $model->init($self);
     };
     
-    return $return || $blessed;
+    ##if the model has init sub return it
+    ##other wise bless and return model class
+    return $return || bless({
+        c => $self
+    },$model);
     
 }
 
@@ -327,10 +370,12 @@ sub server {
 sub get { Cake::Controllers->dispatch('get',@_); }
 sub post { Cake::Controllers->dispatch('post',@_); }
 sub any { Cake::Controllers->dispatch('any',@_); }
-sub after { Cake::Controllers->dispatch('after',@_); }
-sub before { Cake::Controllers->dispatch('before',@_); }
 sub route { Cake::Controllers->dispatch('route',@_); }
 sub auto { Cake::Controllers->auto(@_); }
+
+#maybe to be implemented later
+#sub after { Cake::Controllers->after('after',@_); }
+#sub before { Cake::Controllers->before('before',@_); }
 
 #============================================================================
 # Custom Action Class Loader
@@ -346,9 +391,7 @@ sub Action {
     
     if (@_ == 1){
         $self = $_[0];
-    }
-    
-    elsif (@_){
+    } elsif (@_){
         $self = \@_;
     }
     
@@ -410,6 +453,9 @@ sub chained {
         my $dispatch = shift;
         my $path = $dispatch->Action->{path};
         
+        ##tell dispatcher this can be called on chains only
+        $dispatch->Action->{chain} = 1;
+        
         my $class;
         my $namespace;
         my $abs_path = $chain_path;
@@ -447,48 +493,32 @@ sub chained {
 #============================================================================
 sub capture {return $_[0]->action->{args}}
 
-
-
 sub ActionClass {
     return shift->action->{ActionClass};
 }
-
 #============================================================================
 # return controller class object
 #============================================================================
 sub controller {
     return shift->action->{controller};
 }
-
 #============================================================================
 # return current action code
 #============================================================================
 sub code {
     return shift->action->{code};
 }
-
-
 #============================================================================
 # set body content
 #============================================================================
 sub body {
     
     my ($self,$content) = @_;
-    
     if (@_ == 2){
-        
         my $body;
-        
-        if (ref $content eq ('CODE' || 'ARRAY')){
+        if (ref $content eq ('CODE' || 'ARRAY' || 'GLOB')){
             $body = $content;
-        }
-        
-        elsif (ref $content eq 'GLOB'){
-            $body = $content;
-        }
-        
-        #save as file handle
-        else {
+        } else {
             #truncates and open for reading and writing
             open($body, "+>", undef);
             $body->write($content);
@@ -507,7 +537,6 @@ sub body {
 sub write {
     my ($self,$chunk) = @_;
     my $fh = $self->body();
-    
     if ($fh && ref $fh eq 'GLOB'){
         $fh->write($chunk);
     } else {
@@ -518,17 +547,19 @@ sub write {
 # dump data
 #============================================================================
 sub dumper {
-    
     my $self = shift;
     my $data = shift;
     $self->body(Dumper $data);
-    
 }
 
 sub json {
     my $self = shift;
     my $data = shift;
-    $self->body($self->serialize($data)->to_json);
+    if (ref $data eq 'HASH'){
+        $data = $self->serialize($data)->to_json;
+    }
+    $self->content_type('application/javascript; charset=utf-8');
+    $self->body($data);
 }
 
 #============================================================================
@@ -566,7 +597,6 @@ sub detach {
 #============================================================================
 sub param {
     my $self = shift;
-
     if ( @_ == 0 ) {
         return keys %{ $self->parameters };
     }
@@ -576,9 +606,8 @@ sub param {
         while (my ($key,$value) = each(%{$hash})){
             $self->parameters->{$key} = $value;
         }
-    }
-
-    elsif ( @_ == 1 ) {
+        
+    } elsif ( @_ == 1 ) {
         
         my $param = shift;
         
@@ -596,16 +625,14 @@ sub param {
               ? ( $self->parameters->{$param} )
               : $self->parameters->{$param};
         }
-    }
-    
-    elsif ( @_ > 1 ) {
+        
+    } elsif ( @_ > 1 ) {
         my $field = shift;
         $self->parameters->{$field} =  @_ >= 2 ? [@_] : $_[0] ;
     }
     
     return $self->parameters();
 }
-
 
 #============================================================================
 # params : alias for parameters
@@ -630,12 +657,8 @@ sub push_header {
             my $head = $key.': '.$header->{$key};
             $self->push_header($head);
         }
-        
         return;
-        
-    }
-    
-    elsif (ref $header eq 'ARRAY'){
+    } elsif (ref $header eq 'ARRAY'){
         map { $self->push_header($_) } @{$header};
         return;
     }
@@ -649,13 +672,9 @@ sub push_header {
     
     if ($header =~ s/^content-type:\s*//i){
         $self->content_type($header);
-    }
-    
-    elsif ($header =~ s/^status:\s*//i){
+    } elsif ($header =~ s/^status:\s*//i){
         $self->status_code($header);
-    }
-    
-    else {
+    } else {
         push(@{$self->{response}->{headers}}, $header);
     }
     
@@ -667,12 +686,10 @@ sub push_header {
 #============================================================================
 sub headers {
     my $self = shift;
-    
     if (@_){
         foreach my $header (@_){
             $self->push_header($header);
         }
-        
         return $self;
     }
     
@@ -709,11 +726,8 @@ sub redirect {
     my $self = shift;
     my $url = shift;
     my $status   = shift || 302;
-    
     $url = $self->uri_for($url);
-    
     $self->status_code($status);
-    
     $self->push_header("Location: $url");
     
     ##just in case ?? inject this HTNL/javascript redirect
@@ -751,9 +765,6 @@ sub forward {
 }
 
 
-
-
-
 #package UNIVERSAL;
 #use strict;
     sub methods {
@@ -763,7 +774,6 @@ sub forward {
         my %classes_seen;
         my %methods;
         my @class = ($class);
-        
         no strict 'refs';
         while ($class = shift @class) {
             next if $classes_seen{$class}++;
@@ -775,7 +785,6 @@ sub forward {
                 $methods{$method} = wantarray ? undef : $class->can($method); 
             }
         }
-      
         wantarray ? keys %methods : \%methods;
     }
 
@@ -784,17 +793,9 @@ sub forward {
 package Cake::ENV;
 our $AUTOLOAD;
 
-sub ip {
-    return shift->{SERVER_ADDR};
-}
-
-sub host {
-    return shift->{HTTP_HOST};
-}
-
-sub referrer {
-    return shift->{HTTP_REFERER};
-}
+sub ip { shift->{REMOTE_ADDR} }
+sub host { shift->{HTTP_HOST} }
+sub referrer { shift->{HTTP_REFERER} }
 
 sub AUTOLOAD {
     my $self = shift;
@@ -805,7 +806,6 @@ sub AUTOLOAD {
             return $val;
         }
     }
-    
     return '';
 }
 

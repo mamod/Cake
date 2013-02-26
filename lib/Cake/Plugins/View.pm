@@ -2,13 +2,11 @@ package Cake::Plugins::View;
 use Cake 'Plugin';
 use Cake::View::TT;
 use Carp;
-our $VERSION = "0.001";
 
 my $template;
 my $settings;
 
 sub template {
-    
     return $template if $template;
     $settings ||= $_[1] || settings;
     
@@ -35,7 +33,6 @@ sub _render_template {
     my $self = shift;
     my $file = shift;
     my $vars = shift;
-    
     $vars = {} if !$vars;
     ###stash pass as default with Cake object as c
     $vars = {%{$self->stash},%{$vars},c=>$self};
@@ -56,9 +53,7 @@ sub _render_template {
             file => $error->{file}
         });
     }
-    
     return $temp;
-    
 }
 
 

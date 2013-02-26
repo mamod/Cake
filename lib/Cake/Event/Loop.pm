@@ -163,9 +163,7 @@ sub loop_io {
         foreach my $fd (@{$fh}){
             $select->add($fd);
         }
-    }
-    
-    else {
+    } else {
         $select->add($fh);
     }
     
@@ -186,7 +184,6 @@ sub loop_io {
     
     local $self->{loop_io} = 0;
     $self->loop();
-    
     return $self;
 }
 

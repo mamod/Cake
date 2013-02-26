@@ -2,10 +2,9 @@
 
 Cake Application Deployment
 
-
 =head1 CGI
 
-=head1 Cake Server
+=head1 Cake Development Server
 
 =head1 Apache
 

@@ -46,8 +46,7 @@ sub init {
     
     ##save previos ISA
     my @isa = @Cake::ISA;
-    
-    @Cake::ISA = ('Exporter','Cake::Engine::Default','Cake::Dispatcher');
+    @Cake::ISA = ('Exporter','Cake::Engine','Cake::Dispatcher');
     
     my %seen;
     while (my ($key,$value) = each (%INC) ){
@@ -65,8 +64,6 @@ sub init {
         
         @Cake::ISA = @isa;
     }
-    
-    
 }
 
 register();
