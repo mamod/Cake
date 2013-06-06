@@ -1,23 +1,19 @@
 package Cake::Plugins::I18N;
 use Carp;
 use Cake 'Plugin';
-
 my $req = {};
 my $settings;
 
 sub loc {
-    
     my $self = shift;
     my $string = shift;
     $settings ||= settings();
-    
     my $dir = $settings->{path} || $self->app->{'dir'}.'/I18N';
     my $lang = $settings->{lang} || 'en';
     my $path = $dir.'/'.$lang;
     my $file;
     
     #croak "I18N Folder Not found in $path app directory please create one" if (! -e "$path");
-    
     if (ref $string eq 'ARRAY'){
         $lang = $lang.'::'.$string->[0];
         $file = $path.'/'.$string->[0].'.po';
@@ -27,16 +23,13 @@ sub loc {
     }
     
     my $package = $self->app->{'basename'}.'::I18N::'.$lang;
-
     if (!$req->{$package}){ ##memoize
-        
         #eval "require $package";
         $req->{$package} = 1;
         my %hash = Cake::Plugins::I18N::Lexi::_get_lexi($file || $package);
-        
         {
             no strict 'refs';
-            
+            no warnings;
             *{"${package}::Lexi"} = sub {
                 shift;
                 my $str = shift;
@@ -54,11 +47,9 @@ sub loc {
                 return $str;
             };
         }
-    }
-    
+    }   
     return $package->Lexi($string,@_);
 }
-
 
 sub set_lang {
     my $self = shift;
@@ -82,6 +73,7 @@ sub _get_lexi {
     } else {
         open my $DATA, '<', $package;
         #or croak "Can't open $package for input:\n$!";
+        binmode $DATA,":utf8";
         local $/;
         $data = <$DATA>;
         close $DATA;

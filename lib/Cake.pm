@@ -16,7 +16,7 @@ use Cake::URI;
 use base qw/Exporter Cake::Dispatcher Cake::Engine/;
 use FindBin qw($Bin);
 
-our $VERSION = '1.006';
+our $VERSION = '0.006';
 
 my @controller_export = qw(
     get
@@ -94,8 +94,6 @@ sub import {
     if (!$SELF){
         $SELF->{'basename'} = $package;
         $package .='.pm';
-        
-        #print Dumper \%INC;
         
         ( $SELF->{'dir'} = $INC{$package} || $Bin) =~ s/\.pm//;
         push @INC, $SELF->{'dir'};
@@ -194,7 +192,6 @@ sub context {
 # bakery: bake the cake
 #============================================================================
 sub bake {
-    
     my $class = shift;
     my $self = bless({}, __PACKAGE__);
     
@@ -207,7 +204,6 @@ sub bake {
     $self->{settings} = $SETTINGS;
     $self->loadOnce();
     return $self->_runner() if !$_[1];
-    print Dumper caller(2);
     return $self;
 }
 
@@ -239,6 +235,7 @@ sub _runner {
         if ($self->app->{can}->{end}){
             $self->app->end($self);
         }
+        
         $self->finalize();
     };
     
@@ -349,10 +346,8 @@ sub loadPlugins {
 # register plugins
 #============================================================================
 sub register {
-    
     my @attr = @_;
     my $caller = caller(0);
-    
     unshift @Cake::ISA,$caller;
     return;
 }
@@ -444,10 +439,7 @@ sub args {
 # chained controllers
 #============================================================================
 sub chained {
-    
-    #return ('args',$_[0]);
     my $chain_path = $_[0];
-    
     return sub {
         
         my $dispatch = shift;
@@ -460,9 +452,7 @@ sub chained {
         my $namespace;
         my $abs_path = $chain_path;
         
-        
         $class  = $dispatch->Action->{class};
-        
         
         ($class) = $class =~ m/Controllers(::.*)$/;
         ($class = lc $class) =~ s/::/\//g;
@@ -485,13 +475,17 @@ sub chained {
         push @{$dispatch->{chains}->{$to_chain}->{chained_by}},$path;
         
     };
-    
 }
 
 #============================================================================
 # some short cuts
 #============================================================================
-sub capture {return $_[0]->action->{args}}
+sub capture {
+    if (@_ > 1){
+        return $_[0]->action->{args}->[$_[1]];
+    }
+    return $_[0]->action->{args}
+}
 
 sub ActionClass {
     return shift->action->{ActionClass};
@@ -512,7 +506,6 @@ sub code {
 # set body content
 #============================================================================
 sub body {
-    
     my ($self,$content) = @_;
     if (@_ == 2){
         my $body;
@@ -527,11 +520,21 @@ sub body {
         $self->{response}->{'body'} = $body;
         return $self;
     }
-    
     my $body = $self->{response}->{'body'};
     return $body;
 }
 
+sub getBody {
+    my ($self) = @_;
+    my $body = $self->{response}->{'body'};
+    if (ref $body eq 'GLOB'){
+        $body->seek(0,0);
+        local $/;
+        return <$body>;
+    } else {
+        return $body;
+    }
+}
 
 ##append content to the body
 sub write {
@@ -543,6 +546,7 @@ sub write {
         $self->body($chunk);
     }
 }
+
 #============================================================================
 # dump data
 #============================================================================
@@ -562,35 +566,11 @@ sub json {
     $self->body($data);
 }
 
-#============================================================================
-# stash
-#============================================================================
-#sub stash {
-#    
-#    my $self = shift;
-#    
-#    $self->{'app.stash'} ||= {};
-#    
-#    
-#    if (@_){
-#        my $hash = @_ > 1 ? { @_ } : $_[0];
-#        croak('stash takes a hash or hashref') unless ref $hash;
-#        $self->{'app.stash'} = $hash;
-#        return $self;
-#    }
-#    
-#    
-#    return $self->{'app.stash'};
-#    
-#}
-
-
 sub detach {
     my $self = shift;
     $self->finalize();
     Cake::Exception::Mercy_Killing($self);
 }
-
 #============================================================================
 # param : set/get param
 # copied form catalyst param method :P that's why it looks sophisticated :))
@@ -610,11 +590,9 @@ sub param {
     } elsif ( @_ == 1 ) {
         
         my $param = shift;
-        
         unless ( exists $self->parameters->{$param} ) {
             return wantarray ? () : undef;
         }
-        
         if ( ref $self->parameters->{$param} eq 'ARRAY' ) {
             return (wantarray)
               ? @{ $self->parameters->{$param} }
@@ -630,7 +608,6 @@ sub param {
         my $field = shift;
         $self->parameters->{$field} =  @_ >= 2 ? [@_] : $_[0] ;
     }
-    
     return $self->parameters();
 }
 
@@ -651,7 +628,6 @@ sub push_header {
     
     my $self = shift;
     my ($header) = @_;
-    
     if (ref $header eq 'HASH'){
         foreach my $key (keys %{$header}){
             my $head = $key.': '.$header->{$key};
@@ -692,7 +668,6 @@ sub headers {
         }
         return $self;
     }
-    
     return wantarray ? @{$self->{response}->{headers}} : $self->{response}->{headers};
 }
 
@@ -722,7 +697,6 @@ sub status_code {
 # redirect
 #============================================================================
 sub redirect {
-    
     my $self = shift;
     my $url = shift;
     my $status   = shift || 302;
@@ -744,59 +718,25 @@ sub redirect {
 # return $c->forward();
 #============================================================================
 sub forward {
-    
     my $self = shift;
     my $forward_to = shift;
     my $args = shift;
-    
     if (ref $forward_to eq 'CODE'){
         $forward_to->($self->controller,$self,$args);
-    }
-    
-    elsif ($forward_to !~ /^\//){
+    } elsif ($forward_to !~ /^\//){
         $self->controller()->$forward_to($self,$args);
-    }
-    
-    else {
+    } else {
         ####alter reguest path
         $self->path($forward_to);
         $self->run($args);
     }
 }
 
-
-#package UNIVERSAL;
-#use strict;
-    sub methods {
-        my ($class, $types) = @_;
-        $class = ref $class || $class;
-        $types ||= '';
-        my %classes_seen;
-        my %methods;
-        my @class = ($class);
-        no strict 'refs';
-        while ($class = shift @class) {
-            next if $classes_seen{$class}++;
-            unshift @class, @{"${class}::ISA"} if $types eq 'all';
-            # Based on methods_via() in perl5db.pl
-            for my $method (grep {not /^[(_]/ and 
-                                  defined &{${"${class}::"}{$_}}} 
-                            keys %{"${class}::"}) {
-                $methods{$method} = wantarray ? undef : $class->can($method); 
-            }
-        }
-        wantarray ? keys %methods : \%methods;
-    }
-
-
-
 package Cake::ENV;
 our $AUTOLOAD;
-
 sub ip { shift->{REMOTE_ADDR} }
 sub host { shift->{HTTP_HOST} }
 sub referrer { shift->{HTTP_REFERER} }
-
 sub AUTOLOAD {
     my $self = shift;
     my $sub = $AUTOLOAD;
@@ -815,7 +755,7 @@ __END__
 
 =head1 NAME
 
-Cake - A simple perl web framework
+Cake - A simple web framework
 
 =head1 SYNOPSIS
 
@@ -832,7 +772,7 @@ Cake - A simple perl web framework
     };
     
     ##bake and serve the cake
-    bake->server();
+    bake->serve();
 
 
 =head1 DESCRIPTION
@@ -859,13 +799,3 @@ to reinvent some wheels and steel some others :)
 =item Cake is also PSGI/Plack friendly by default, no need to change anything to enable your app to run under any of the available Plack webservers
 
 =back
-
-
-
-
-
-
-
-
-
-

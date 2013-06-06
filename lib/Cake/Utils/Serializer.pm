@@ -10,9 +10,9 @@ sub new {
 }
 
 sub true {'true' }
-sub false { 'false' }
+sub false { undef }
 sub null { 'null' }
-
+    
 ##from json to perl
 sub to_perl {
     my $self = shift;
@@ -28,7 +28,11 @@ sub to_perl {
     
     my $str = eval "$data";
     croak "invalid json" if $@;
-    return _stringify($str);
+    
+    #return bless($str,'Cake::Utils::Serializer::Base');
+    
+    return $str;
+    return _stringify($data);
 }
 
 sub to_json {
@@ -120,7 +124,29 @@ sub _encode_string {
     return $str;
 }
 
-
+package Cake::Utils::Serializer::Base;
+use Data::Dumper;
+our $AUTOLOAD;
+sub AUTOLOAD {
+    my $self = shift;
+    my $index = shift;
+    my $sub = $AUTOLOAD;
+    
+    $sub =~ s/.*:://;
+    my $val = $self->{$sub};
+    
+    return undef if (!defined $val);
+    
+    if ($index && ref $val eq 'ARRAY'){
+        $val = $val->[$index];
+    }
+    
+    if (ref $val){
+        return bless($val,__PACKAGE__);
+    } else {
+        return $val;
+    }
+}
 
 1;
 

@@ -3,15 +3,15 @@ use strict;
 use warnings;
 use Carp;
 use IO::File;
-my $UPLOADS = {};
+use File::Temp qw/ tempfile tempdir /;
 
 sub init {
     my $self = shift;
-    my $uri = $self->env->{'REQUEST_URI'};
+    my $uri = $self->env->{'REQUEST_URI'} || '';
     my($path, $query) = ( $uri =~ /^([^?]*)(?:\?(.*))?$/s );
     
     ##remove script name from path info
-    my $script = $self->env->{SCRIPT_NAME};
+    my $script = $self->env->{SCRIPT_NAME} || '';
     $path =~ s/^$script//;
     
     #for ($path, $query) { s/\#.*$// if length } # dumb clients sending URI fragments
@@ -120,7 +120,6 @@ sub _charFormatter {
     return ($char x $multi) . "#\n";
 }
 
-
 #=============================================================================
 # serve output
 #=============================================================================
@@ -175,7 +174,7 @@ sub post_parameters {
             $buffer = <$tt>;
         }
     }
-    
+    ##CGI
     else {
         read( STDIN, $buffer, $self->env->{ "CONTENT_LENGTH" } );
     }
@@ -227,21 +226,28 @@ sub _multipart_parameters {
         (?:Content-Type:(.*))?
         /x;
         
-        my $fh;
+        
         if($filename){
             #make sure the file name is safe
-            $fh = IO::File->new("> /xampp/htdocs/CakeBlog/$filename");
+            my $dir = tempdir( CLEANUP => 1 );
+            my ($fh, $tmp) = tempfile(
+                DIR => $dir,
+                SUFFIX => '.dat'
+            );
+            
+            $fh->unlink_on_destroy( 1 );
+            
             if (defined $fh) {
-                binmode($fh);
+                binmode $fh, ":utf8";
                 print $fh $content;
                 $fh->close;
-                $handle = $fh;
             }
             
             $self->{uploads}->{$name} = {
-                'filehandle' => $handle,
+                'filehandle' => $fh,
                 'filename' => $filename,
-                'path' => '',
+                temp => $tmp,
+                'path' => $dir,
                 'content-type' => $contenttype
             };
             
@@ -254,8 +260,6 @@ sub _multipart_parameters {
     my $query = join('&',@query);
     return $self->_parse_parameters($query);
 }
-
-
 
 #=============================================================================
 # XXX - TODO return uploads info & file handle
@@ -274,9 +278,9 @@ sub uploads {
 }
 
 sub upload {
-    
-    
-    
+    my $self = shift;
+    my $name = shift;
+    return $self->uploads->{$name};
 }
 
 
@@ -362,26 +366,18 @@ sub serve_as_psgi {
     return [ $self->status_code, \@headers, $body ];
 }
 
-
 sub _get_psgi_headers {
-    
     my $self = shift;
-    
     my @headers = ('Content-Type',$self->content_type);
-    
     foreach my $header (@{$self->headers}){
         my @nh = split(/:/,$header,2);
         push (@headers,@nh);
     }
-    
     return @headers;
 }
 
-
 sub print_headers {
-    
     my $self = shift;
-    
     my $headers;
     
     ##normal print/ for CGI
@@ -390,7 +386,6 @@ sub print_headers {
     
     $headers = Cake::Utils::get_status_code($self->env,$self->status_code);
     $headers = "HTTP/1.1 Status: ".$self->status_code."\015\012";
-    
     $headers .= "$content_type_header\015\012";
     
     my $found_content_length;
@@ -408,9 +403,7 @@ sub print_headers {
     $headers .= "\015\012";
     my $stdout = $self->stdout;
     print $stdout $headers;
-    
 }
-
 
 sub print_body {
     
@@ -430,10 +423,8 @@ sub print_body {
     
     elsif (ref $body eq 'CODE'){
         $body->(__PACKAGE__);
-        #print $body->();
     }
 }
-
 
 #=============================================================================
 # ENV
@@ -446,12 +437,11 @@ sub path {
     return $_[0]->env->{PATH_INFO} || '/';
 }
 
-
 sub method {
     if (@_ > 1){
         $_[0]->env->{REQUEST_METHOD} = $_[1];
     }
-    return lc $_[0]->env->{REQUEST_METHOD};
+    return lc ($_[0]->env->{REQUEST_METHOD} || '');
 }
 
 sub is_secure {
@@ -466,7 +456,6 @@ sub base {
     return $base;
 }
 
-
 sub host {
     return $_[0]->env->{HTTP_HOST};
 }
@@ -474,7 +463,6 @@ sub host {
 sub server_protocol {
     return shift->env->{SERVER_PROTOCOL} || 'HTTP/1.1';
 }
-
 
 sub request_header {
     

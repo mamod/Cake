@@ -36,10 +36,8 @@ sub _con {
     return @{$info};
 }
 
-
 {
     #no warnings 'redefine';
-    
     sub table {
         my $self = shift;
         my @tb = @_;
@@ -49,7 +47,6 @@ sub _con {
             $self->NEXT::table(@_);
         }
     }
-    
     
     sub connect {
         my $self = shift;

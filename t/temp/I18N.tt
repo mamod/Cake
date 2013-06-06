@@ -1,0 +1,4 @@
+[% SETTINGS %]
+layout:
+[% END %]
+[% c.loc('welcome','Mamod','Mehyar') %]

@@ -108,7 +108,6 @@ sub get_full_url {
 
 sub subdomain {
     my $self = shift;
-    
     return $self->{'subdomain'} if $self->{'subdomain'};
     
     ###parse sub domains

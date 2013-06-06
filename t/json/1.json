@@ -4,57 +4,6 @@
            "modhash":"",
            "children":[
               {
-                 "kind":"t3",
-                 "data":{
-                    "domain":"self.testapiarena",
-                    "banned_by":null,
-                    "media_embed":{
-
-                    },
-                    "subreddit":"testapiarena",
-                    "selftext_html":"&lt;!-- SC_OFF --&gt;&lt;div class=\"md\"&gt;&lt;p&gt;Example of selfpost text&lt;/p&gt;\n&lt;/div&gt;&lt;!-- SC_ON --&gt;",
-                    "selftext":"Example of selfpost text",
-                    "likes":null,
-                    "link_flair_text":null,
-                    "id":"v4bux",
-                    "clicked":false,
-                    "title":"testing nested comments",
-                    "num_comments":3,
-                    "score":1,
-                    "approved_by":null,
-                    "over_18":false,
-                    "hidden":false,
-                    "thumbnail":"",
-                    "subreddit_id":"t5_2ub3u",
-                    "edited":false,
-                    "link_flair_css_class":null,
-                    "author_flair_css_class":null,
-                    "downs":0,
-                    "saved":false,
-                    "is_self":true,
-                    "permalink":"/r/testapiarena/comments/v4bux/testing_nested_comments/",
-                    "name":"t3_v4bux",
-                    "created":1339833041.0,
-                    "url":"http://www.reddit.com/r/testapiarena/comments/v4bux/testing_nested_comments/",
-                    "author_flair_text":null,
-                    "author":"elzi",
-                    "created_utc":1339807841.0,
-                    "media":null,
-                    "num_reports":null,
-                    "ups":1
-                 }
-              }
-           ],
-           "after":null,
-           "before":null
-        }
-     },
-     {
-        "kind":"Listing",
-        "data":{
-           "modhash":"",
-           "children":[
-              {
                  "kind":"t1",
                  "data":{
                     "body":"This is a parent comment",
@@ -154,4 +103,4 @@
            "after":null,
            "before":null
         }
-     }
+ }

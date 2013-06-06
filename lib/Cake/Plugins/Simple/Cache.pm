@@ -11,8 +11,7 @@ sub _cache {
         cache_root => $settings->{cache_root},
         expire_time => $settings->{expire_time},
         depth => $settings->{depth}
-    );
-    
+    );   
     return $cacheinstance;
 }
 
@@ -21,10 +20,8 @@ sub cache {
     if (@_ > 1 && ref $_[1]){
         return _cache->set(@_);
     }
-    
     return _cache->get(@_);
 }
-
 
 sub get_cache_location {
     shift;
@@ -34,17 +31,13 @@ sub get_cache_location {
     return $path.'/'.$file;
 }
 
-
 sub newCache {
     my $self = shift;
     my %settings = @_;
     return Cake::Plugins::Simple::Cache::Base->new(%settings);
 }
 
-
 register();
-
-
 
 package #hide
     Cake::Plugins::Simple::Cache::Base;
@@ -53,12 +46,9 @@ package #hide
     use File::Path qw(make_path);
     use Storable qw( retrieve nstore );
     
-    
 sub new {
-    
     my $class = shift;
-    my %options = @_;
-    
+    my %options = @_;   
     my $self = {
         expire_time => $options{expire_time} || 3600,
         cache_root => $options{cache_root} || '/',
@@ -67,9 +57,7 @@ sub new {
     
     $self = bless ($self,$class);
     return $self;
-    
 }
-
 
 sub cache {
     my $self = shift;
@@ -80,7 +68,6 @@ sub cache {
 }
 
 sub set {
-    
     my $self = shift;
     my ($name,$data,$expire,$subfolder) = @_;
     
@@ -104,8 +91,6 @@ sub set {
     
     nstore ($ca, $fullfile) or die "can't write to $fullfile\n";
     return $data;
-    
-    
 }
 
 sub get {
@@ -118,10 +103,8 @@ sub get {
     my ($path,$file) = $self->_get_path_and_file($name,$subfolder);
     $file = $path.'/'.$file;
     
-    local $SIG{__DIE__} = 'IGNORE';
-    
+    local $SIG{__DIE__} = 'IGNORE';   
     my $data;
-    
     eval {
         $data = retrieve($file);
     };
@@ -129,14 +112,13 @@ sub get {
     if ($@){
         #die $@;
         undef $@;
-        return 0;
+        return undef;
     } elsif (time() > $data->{expire_time}){
-        return 0;
+        return undef;
     }
     
     return $data->{data};
 }
-
 
 sub _get_expire_time {
     my $self = shift;
@@ -146,7 +128,6 @@ sub _get_expire_time {
 
 
 sub _get_path_and_file {
-    
     my ($self,$name,$subfolder) = @_;
     my $digest = md5_hex($name);
     
@@ -160,7 +141,6 @@ sub _get_path_and_file {
     
     my $cache_root = $self->{cache_root};
     $cache_root .= '/'.$subfolder if $subfolder;
-    
     #my $x = File::Spec->catfile(@deep, $file);
     my $path = join('/',$cache_root,@deep);
     return ($path,$file);
@@ -260,7 +240,7 @@ set/get cache
 
 =over 4
 
-=item L<cache('name',{hashref}, 'time')>
+=item C<cache('name',{hashref}, 'time')>
 
 caching data, accepts 3 arguments
 
@@ -270,7 +250,7 @@ B<hashref:> data to be cached - hashref - required
 
 B<time:> overrides the default time to expire - string - optional
 
-=item L<cache('name','/absolute/path')>
+=item C<cache('name','/absolute/path')>
 
 retrieve cached data and return hashref, takes 2 arguments
 
