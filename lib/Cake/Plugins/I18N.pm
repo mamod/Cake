@@ -3,6 +3,9 @@ use Carp;
 use Cake 'Plugin';
 my $req = {};
 my $settings = {};
+use Data::Dumper;
+
+my $langs = {};
 
 sub loc {
     my $self = shift;
@@ -22,16 +25,13 @@ sub loc {
         $file = $path.'.po';
     }
     
-    my $package = $self->app->{'basename'}.'::I18N::'.$lang;
-    if (!$req->{$package}){ ##memoize
-        eval "require $package";
-        $req->{$package} = 1;
-        my %hash = Cake::Plugins::I18N::Lexi::_get_lexi($file || $package);
+    if (!$langs->{$lang}){ ##memoize
+        my %hash = Cake::Plugins::I18N::Lexi::_get_lexi($file);
         {
-            no strict 'refs';
-            no warnings;
-            *{"${package}::Lexi"} = sub {
-                shift;
+            #no strict 'refs';
+            #no warnings;
+            $langs->{$lang} = sub {
+                
                 my $str = shift;
                 my $hash = \%hash;
                 $str = $hash->{$str} || $str;
@@ -45,7 +45,8 @@ sub loc {
             };
         }
     }
-    return $package->Lexi($string,@_);
+    
+    return $langs->{$lang}->($string,@_);
 }
 
 sub set_lang {
