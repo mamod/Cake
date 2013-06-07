@@ -287,6 +287,7 @@ sub load {
     $file = $self->{path}."/$file";
     
     if (open(my $fh,'<',$file)) {
+        #binmode $fh,":utf8";
         $data = <$fh>;
         close($fh);
         

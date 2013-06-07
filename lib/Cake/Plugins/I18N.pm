@@ -53,6 +53,7 @@ sub set_lang {
     my $lang = shift;
     $settings ||= settings();
     $settings->{lang} = $lang if $lang;
+    return 0;
 }
 
 sub get_lang {

@@ -514,6 +514,7 @@ sub body {
         } else {
             #truncates and open for reading and writing
             open($body, "+>", undef);
+            binmode $body,":utf8";
             $body->write($content);
         }
         
