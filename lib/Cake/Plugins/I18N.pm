@@ -2,7 +2,7 @@ package Cake::Plugins::I18N;
 use Carp;
 use Cake 'Plugin';
 my $req = {};
-my $settings;
+my $settings = {};
 
 sub loc {
     my $self = shift;
@@ -33,12 +33,9 @@ sub loc {
             *{"${package}::Lexi"} = sub {
                 shift;
                 my $str = shift;
-                
                 my $hash = \%hash;
                 $str = $hash->{$str} || $str;
-                
                 my @arr = ();
-                
                 if (@_){
                     @arr =  ('',  @_ > 1 || !ref $_[0] ?  @_ : @{$_[0]} );
                     $str =~ s/%(\d+)/$arr[$1]/g;
@@ -56,6 +53,11 @@ sub set_lang {
     my $lang = shift;
     $settings ||= settings();
     $settings->{lang} = $lang if $lang;
+}
+
+sub get_lang {
+    my $self = shift;
+    return $settings->{lang} || 'en';
 }
 
 register();
@@ -80,7 +82,6 @@ sub _get_lexi {
     }
     
     $data =~ s/\n/#/g;
-    
     my @data = split(/##/, $data);
     my %hash = ();
     foreach my $line (@data){
