@@ -24,7 +24,7 @@ sub loc {
     
     my $package = $self->app->{'basename'}.'::I18N::'.$lang;
     if (!$req->{$package}){ ##memoize
-        #eval "require $package";
+        eval "require $package";
         $req->{$package} = 1;
         my %hash = Cake::Plugins::I18N::Lexi::_get_lexi($file || $package);
         {
@@ -44,7 +44,7 @@ sub loc {
                 return $str;
             };
         }
-    }   
+    }
     return $package->Lexi($string,@_);
 }
 
