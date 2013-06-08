@@ -11,14 +11,14 @@ sub loc {
     my $self = shift;
     my $string = shift;
     $settings ||= settings();
-    my $dir = $settings->{path} || $self->app->{'dir'}.'/I18N';
+    my $dir = $settings->{path} || $self->app->{'dir'} . '/I18N';
     my $lang = $settings->{lang} || 'en';
     my $path = $dir.'/'.$lang;
     my $file;
     
     #croak "I18N Folder Not found in $path app directory please create one" if (! -e "$path");
     if (ref $string eq 'ARRAY'){
-        $lang = $lang.'::'.$string->[0];
+        $lang = $lang . '::' . $string->[0];
         $file = $path.'/'.$string->[0].'.po';
         $string = $string->[1];
     } else {
@@ -28,10 +28,7 @@ sub loc {
     if (!$langs->{$lang}){ ##memoize
         my %hash = Cake::Plugins::I18N::Lexi::_get_lexi($file);
         {
-            #no strict 'refs';
-            #no warnings;
             $langs->{$lang} = sub {
-                
                 my $str = shift;
                 my $hash = \%hash;
                 $str = $hash->{$str} || $str;
@@ -64,26 +61,22 @@ sub get_lang {
 
 register();
 
-package Cake::Plugins::I18N::Lexi;
+package #hide
+    Cake::Plugins::I18N::Lexi;
+use Data::Dumper;
 sub _get_lexi {
-    
     my $package = shift;
     my $data;
     
-    if ($package =~ /::/){
-        no strict 'refs';
-        my $DATA = *{"${package}::DATA"};
-        $data = do { local $/;  <$DATA> };
-    } else {
-        open my $DATA, '<', $package;
-        #or croak "Can't open $package for input:\n$!";
-        binmode $DATA,":utf8";
-        local $/;
-        $data = <$DATA>;
-        close $DATA;
-    }
+    open my $DATA, '<', $package
+    or die "Can't open $package for input:\n$!";
+    binmode $DATA,":utf8";
+    $data = do { local $/;  <$DATA> };
+    close $DATA;
     
+    STDERR->print(Dumper($data));
     $data =~ s/\n/#/g;
+    STDERR->print(Dumper($data));
     my @data = split(/##/, $data);
     my %hash = ();
     foreach my $line (@data){
@@ -91,7 +84,7 @@ sub _get_lexi {
             $hash{$1} = $2;
         }
     }
-    
+    STDERR->print(Dumper(\%hash));
     return %hash;
 }
 

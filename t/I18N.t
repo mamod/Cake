@@ -51,6 +51,19 @@ App->bake()->serve(sub {
     #diag $octets;
     
     like(encode("utf8", $bd), qr/$octets/,'I18N Arabic match in Template');
+
+    ##tests from sub folders
+    
+    $c->set_lang('en');
+    
+    my $sub1 = $c->loc(['sub','test']);
+    is($sub1,"Test");
+    
+    $c->set_lang('ar');
+    my $sub2 = $c->loc(['sub','test']);
+    is($sub2,"اختبار");
+    
 });
 
 done_testing();
+
