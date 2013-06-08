@@ -3,8 +3,6 @@ use Carp;
 use Cake 'Plugin';
 my $req = {};
 my $settings = {};
-use Data::Dumper;
-
 my $langs = {};
 
 sub loc {
@@ -63,7 +61,21 @@ register();
 
 package #hide
     Cake::Plugins::I18N::Lexi;
-use Data::Dumper;
+
+my %hash;
+my $last;
+
+sub msgstr {
+    my $str = shift;
+    $hash{$last} = $str if $last;
+    $last = undef;
+}
+
+sub msgid {
+    my $str = shift;
+    $last = $str;
+}
+
 sub _get_lexi {
     my $package = shift;
     my $data;
@@ -74,17 +86,9 @@ sub _get_lexi {
     $data = do { local $/;  <$DATA> };
     close $DATA;
     
-    STDERR->print(Dumper($data));
-    $data =~ s/\n/#/g;
-    STDERR->print(Dumper($data));
-    my @data = split(/##/, $data);
-    my %hash = ();
-    foreach my $line (@data){
-        if ($line =~ /msgid "(.*?)"#msgstr "(.*?)"/){
-            $hash{$1} = $2;
-        }
-    }
-    STDERR->print(Dumper(\%hash));
+    $data =~ s/(\w+["'])[\r\n]/$1;\n/g;
+    
+    eval "$data";
     return %hash;
 }
 
