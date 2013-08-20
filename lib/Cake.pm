@@ -48,7 +48,6 @@ __PACKAGE__->Accessor('env','app','engine','action','stash','uri');
 my ($DEBUG,$ENGINE,$SELF);
 my $SETTINGS = {};
 my $COUNTER = 0;
-
 sub clear_counter {$COUNTER = 0}
 sub counter {$COUNTER}
 sub debug {return $DEBUG;}
@@ -56,9 +55,7 @@ sub debug {return $DEBUG;}
 # import on app start
 #============================================================================
 sub import {
-    
     my ($class, @options) = @_;
-    
     my ($package,$script) = caller;
     my $engine;
     
@@ -71,9 +68,7 @@ sub import {
         if (/^Plugin$/){
             $class->export_to_level(1, $class, @plugin_export);
             return;
-        }
-        
-        elsif (/^Controller$/){
+        } elsif (/^Controller$/){
             $class->export_to_level(1, $class, @controller_export);
             return;
         }
@@ -84,9 +79,7 @@ sub import {
             $engine = Cake::Utils::Require($ENGINE,'Cake::Engine');
             if ( $@ ) { die qq/can't load engine "$ENGINE", "$@"/ }
             unshift(@Cake::ISA,$engine);
-        }
-        
-        elsif (/^:Debug=(\S+)/){
+        } elsif (/^:Debug=(\S+)/){
             $DEBUG = $1;
         }
     }
@@ -94,14 +87,12 @@ sub import {
     if (!$SELF){
         $SELF->{'basename'} = $package;
         $package .='.pm';
-        
         ( $SELF->{'dir'} = $INC{$package} || $Bin) =~ s/\.pm//;
         push @INC, $SELF->{'dir'};
     }
     
     $class->export_to_level(1, $class, @EXPORT);
 }
-
 
 #============================================================================
 # Load Settings from outer file / must be a valid json file
@@ -138,8 +129,7 @@ sub settings {
     } else {
         my $package = $_[0] || caller;
         $SETTINGS->{$package} ? return $SETTINGS->{$package} : return $SETTINGS;
-    }
-    
+    }   
     return $SETTINGS;
 }
 
@@ -155,11 +145,9 @@ sub config {
 # load plugins
 #============================================================================
 sub plugins {
-    
     my @plugins = @{$_[0]};
     my @pluginsRequire;
     return if !@plugins;
-    
     my $withOptions;
     for (my $i= 0; $i < @plugins; $i++) {
         if (!ref $plugins[$i]){
@@ -171,7 +159,6 @@ sub plugins {
             }
         }
     }
-    
     map {Cake::Utils::Require($_,'Cake::Plugins')} @pluginsRequire;
     $SETTINGS = {%{$SETTINGS},%{$withOptions}};
 }
@@ -194,7 +181,6 @@ sub context {
 sub bake {
     my $class = shift;
     my $self = bless({}, __PACKAGE__);
-    
     ##load settings
     $self->app(bless($SELF, $class));
     $self->{pid} = $$;
@@ -207,7 +193,6 @@ sub bake {
     return $self;
 }
 
-
 sub loadOnce {
     my $self = shift;
     return if $COUNTER;
@@ -218,11 +203,9 @@ sub loadOnce {
 #============================================================================
 # run app
 #============================================================================
-sub _runner {
-    
+sub _runner {    
     my $self = shift;
     local $SIG{__DIE__};
-    
     eval {
         $self->init();
         if ($self->app->{can}->{begin}){
@@ -247,7 +230,6 @@ sub _runner {
     return $self;
 }
 
-
 #============================================================================
 # Run code on destruction ??!
 #============================================================================
@@ -269,8 +251,7 @@ sub DESTROY {
 #============================================================================
 sub loadControllers {
     return if $COUNTER;
-    my $self = shift;
-    
+    my $self = shift;   
     my $dir = $self->app->{'dir'}.'/Controllers';
     #warn Dumper $dir;
     return if !-d $dir;
@@ -288,7 +269,6 @@ sub loadControllers {
     }, $dir);
 }
 
-
 sub cando {
     my $self = shift;
     $self->app->{can} = {
@@ -299,15 +279,12 @@ sub cando {
     };
 }
 
-
 #============================================================================
 # load app model
 #============================================================================
-sub model {
-    
+sub model {   
     my $self = shift;
     my $model = shift;
-
     my $module = $self->app->{'dir'}."::Model::".$model;
     $module =~ s/::/\//g;
     $module .= '.pm';
@@ -325,23 +302,21 @@ sub model {
     return $return || bless({
         c => $self
     },$model);
-    
 }
 
 #============================================================================
 # load Plugins
 #============================================================================
 sub loadPlugins {
-    
     my $self = shift;
     my $dir = shift;
-    
     foreach my $module (@{$SELF->{plugins}}) {
         Cake::Utils::Require($module,'Cake::Plugins');
         ####maybe we should register plugins internally, but let's first test
         #$self->register($module);
     }
 }
+
 #============================================================================
 # register plugins
 #============================================================================
@@ -375,15 +350,11 @@ sub auto { Cake::Controllers->auto(@_); }
 #============================================================================
 # Custom Action Class Loader
 #============================================================================
-sub Action {
-    
+sub Action {    
     my $class = shift;
     my $caller = (caller)[0];
-    
     $class = Cake::Utils::Require($class,'Cake::Actions');
-    
     my $self = {};
-    
     if (@_ == 1){
         $self = $_[0];
     } elsif (@_){
@@ -392,7 +363,6 @@ sub Action {
     
     ##bless action class
     $class = bless($self,$class);
-    
     return sub {
         my $dispatch = shift;
         $dispatch->Action->{ActionClass} = $class;
@@ -403,8 +373,6 @@ sub Action {
 # args
 #============================================================================
 sub args {
-    
-    #return ('args',$_[0]);
     my $args = $_[0];
     my $num = $args;
     
@@ -413,11 +381,8 @@ sub args {
     }
     
     return sub {
-        
         my $dispatch = shift;
-        
         my $path = $dispatch->Action->{path};
-        
         if (my $chain = $dispatch->{chains}->{$path}){
             $dispatch->{chains}->{$path}->{path} = $path.'('.$num.')';
             $dispatch->{chains}->{$path}->{args} = $num;
@@ -425,14 +390,12 @@ sub args {
         
         if (ref $path eq 'Regexp'){
             $dispatch->Action->{path} = qr{$path(/.*?)(/.*?)$};
-        }
-        else {
+        } else {
             $dispatch->Action->{path} .= '('.$num.')';
         }
         
         $dispatch->Action->{args} = $args;
     };
-    
 }
 
 #============================================================================
@@ -440,11 +403,9 @@ sub args {
 #============================================================================
 sub chained {
     my $chain_path = $_[0];
-    return sub {
-        
+    return sub {  
         my $dispatch = shift;
         my $path = $dispatch->Action->{path};
-        
         ##tell dispatcher this can be called on chains only
         $dispatch->Action->{chain} = 1;
         
@@ -453,12 +414,10 @@ sub chained {
         my $abs_path = $chain_path;
         
         $class  = $dispatch->Action->{class};
-        
         ($class) = $class =~ m/Controllers(::.*)$/;
         ($class = lc $class) =~ s/::/\//g;
         
         $namespace = $dispatch->Action->{namespace};
-        
         my $to_chain = $chain_path;
         unless ($chain_path =~ m/^\// ){
             $to_chain = lc $class.'/'.$chain_path;
@@ -473,7 +432,6 @@ sub chained {
         $dispatch->{chains}->{$path}->{path} = $path;
         $dispatch->{chains}->{$path}->{namespace} = $namespace;
         push @{$dispatch->{chains}->{$to_chain}->{chained_by}},$path;
-        
     };
 }
 
@@ -588,11 +546,11 @@ sub param {
         }
         
     } elsif ( @_ == 1 ) {
-        
         my $param = shift;
         unless ( exists $self->parameters->{$param} ) {
             return wantarray ? () : undef;
         }
+        
         if ( ref $self->parameters->{$param} eq 'ARRAY' ) {
             return (wantarray)
               ? @{ $self->parameters->{$param} }
@@ -625,7 +583,6 @@ sub params {
 # push_header : add header
 #============================================================================
 sub push_header {
-    
     my $self = shift;
     my ($header) = @_;
     if (ref $header eq 'HASH'){

@@ -382,12 +382,9 @@ sub print_headers {
     
     ##normal print/ for CGI
     my $content_type_header = 'Content-Type: '.$self->content_type;
-    my $status_code = 'Status-code: '.$self->status_code;
-    
+    my $status_code = 'Status-code: '.$self->status_code;    
     $headers = Cake::Utils::get_status_code($self->env,$self->status_code);
-    $headers = "HTTP/1.1 Status: ".$self->status_code."\015\012";
     $headers .= "$content_type_header\015\012";
-    
     my $found_content_length;
     foreach my $header (@{$self->headers}){
         $headers .= $header."\015\012";
@@ -397,7 +394,7 @@ sub print_headers {
     
     unless ($found_content_length){
         my $body = $self->body();
-        $headers .= "Content-Length: ".Cake::Utils::content_length($body)."\015\012";
+        $headers .= "Content-Length: ".Cake::Utils::content_length($body)."\015\012" if $body;
     }
     
     $headers .= "\015\012";
@@ -406,13 +403,10 @@ sub print_headers {
 }
 
 sub print_body {
-    
     my $self = shift;
     my $body = $self->body();
-    
     my $stdout = $self->stdout;
     binmode $stdout;
-    
     if (ref $body eq 'GLOB'){
         ##seek to the start
         seek($body,0,0);
@@ -478,7 +472,6 @@ sub request_header {
     return $self->env->{$header};
 }
 
-
 sub stdout {
     my $self = shift;
     if (@_){
@@ -487,13 +480,11 @@ sub stdout {
     return $self->env->{client} || \*STDOUT;
 }
 
-
 #=============================================================================
 # cookies : return cookies list as hash - copied from plack
 #=============================================================================
 sub cookies {
     my $self = shift;
-
     return {} unless $self->env->{HTTP_COOKIE};
 
     # HTTP_COOKIE hasn't changed: reuse the parsed cookie
@@ -527,13 +518,11 @@ sub cookie {
     my $self = shift;
     
     if (ref $_[0] eq 'HASH'){
-        
         my $args = shift;
         my $name = Cake::URI::uri_encode($args->{name} || ref $self->app);
         my $value = Cake::URI::uri_encode($args->{value} || '');
         my $secure = $args->{secure} || '0';
         my $path = $args->{path} || '/';
-        
         my $time = '';
         
         if ($args->{length}){
@@ -550,8 +539,6 @@ sub cookie {
     
     my $name = shift || '';
     return $self->cookies->{$name};
-    
 }
-
 
 1;

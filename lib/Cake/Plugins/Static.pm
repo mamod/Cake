@@ -1,5 +1,6 @@
 package Cake::Plugins::Static;
 use Cake 'Plugin';
+use Cake::Utils;
 use Carp;
 
 my $MIME_TYPES = {
@@ -171,9 +172,6 @@ my $MIME_TYPES = {
     "zip"      =>  "application/zip"
 };
 
-my $time = time();
-
-
 use Data::Dumper;
 sub sendFile {
     my $self = shift;
@@ -181,7 +179,6 @@ sub sendFile {
 }
 
 sub setup {
-    
     my $self = shift;
     my $settings = settings();
     
@@ -204,11 +201,19 @@ sub setup {
         my $content_type = $MIME_TYPES->{$ext} || 'text/plain';
         my $file = $dir.$path;
         
-        ##To do
-        ##browser caching
+        $self->content_type($content_type);
+        
+        ##client caching
+        my $lastModified = (stat $file)[9];
+        if (my $etag = $self->env->HTTP_IF_NONE_MATCH){
+            if ($lastModified == $etag){
+                $self->status_code(304);
+                $self->log('Serving From Client Cache');
+                return 1;
+            }
+        }
         
         my $data = '';
-        
         #open file
         if (open my $fh,'<',$file ){
             binmode $fh;
@@ -222,8 +227,8 @@ sub setup {
             return 1;
         }
         
+        $self->push_header(Etag => $lastModified);
         $self->log("Serving Static File $path");
-        $self->content_type($content_type);
         $self->body($data);
         return 1;
         
@@ -232,12 +237,9 @@ sub setup {
     }
 }
 
-
 register();
 
-
 1;
-
 
 __END__
 

@@ -176,15 +176,13 @@ sub noRequire {
     return $class;
 }
 
-
 sub get_status_code {
     my $env = shift;
     my $message = $StatusCode{$_[0]};
-    
     if ($env->{'http.version'} && $env->{'http.version'} == 1.0){
         return "HTTP/1.0 $_[0] $message\015\012";
     }
-    return "Status: $_[0] $message\015\012";
+    return "HTTP/1.1 $_[0] $message\015\012";
 }
 
 #============================================================================
@@ -223,12 +221,9 @@ sub to_epoch {
     my $expire;
     if ($types->{$type}){
         $expire = $types->{$type}->($num);
-    }
-    
-    else {
+    } else {
         $expire = $length || 3600;
     }
-    
     return $expire+time();
 }
 
