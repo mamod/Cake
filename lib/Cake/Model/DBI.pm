@@ -20,7 +20,8 @@ sub init {
         $connect = $CONNECT->{$1};
     }
     
-    my @connect = $connect ? ref $connect->[0] eq 'CODE' ? @{ $connect->[0]->($c) } : @{$connect}
+    my @connect = $connect ? ref $connect->[0] eq 'CODE' ?
+    @{ $connect->[0]->($c) } : @{$connect}
     : _con($c);
     
     my $blessed = $self->new(@connect);
@@ -36,23 +37,20 @@ sub _con {
     return @{$info};
 }
 
-{
-    #no warnings 'redefine';
-    sub table {
-        my $self = shift;
-        my @tb = @_;
-        if ( !ref $self ){
-            $TABLES->{$self} = \@tb;
-        } else {
-            $self->NEXT::table(@_);
-        }
+sub table {
+    my $self = shift;
+    my @tb = @_;
+    if ( !ref $self ){
+        $TABLES->{$self} = \@tb;
+    } else {
+        $self->NEXT::table(@_);
     }
-    
-    sub connect {
-        my $self = shift;
-        if ( !ref $self ){
-            $CONNECT->{$self} = \@_;
-        }
+}
+
+sub connect {
+    my $self = shift;
+    if ( !ref $self ){
+        $CONNECT->{$self} = \@_;
     }
 }
 

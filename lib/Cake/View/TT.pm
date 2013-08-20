@@ -2,8 +2,7 @@ package Cake::View::TT;
 use strict;
 use warnings;
 use Carp;
-use Data::Dumper;
-
+use Encode;
 #=======================================================================
 # Global REGex
 #=======================================================================
@@ -52,7 +51,6 @@ my $PROCESS = qr{
     $POST)
 }x;
 
-
 my $PROCESS_URL = qr{
     $PRE
     \s*
@@ -62,7 +60,6 @@ my $PROCESS_URL = qr{
     \s*
     $POST
 }x;
-
 
 my $MAIN = qr {
     $PRE
@@ -91,7 +88,6 @@ my $INCLUDE_URL = qr{
     \s*
     $POST
 }x;
-
 
 my $SETTINGS = qr{
     ($PRE
@@ -169,7 +165,6 @@ sub new {
 }
 
 sub render {
-    
     my $self = shift;
     my $file = shift;
     my $data = shift;
@@ -177,7 +172,6 @@ sub render {
     
     $self->{obj} = bless($data,'Cake::View::Object');
     my @matches = $self->loadMatches($file);
-    
     my $temp = $self->{temp};
     
     foreach my $match (@matches){
@@ -198,7 +192,6 @@ sub render {
                 $self->pushData($return);
             }
         } else {
-            
             $content =~ s/print\s+(.+?)\s*;/$self->_varsFromPrint($1)/ges;
             $content =~ s/$VAR/\$self->setVar("$1","eval")/g;
             eval $content;
@@ -206,11 +199,11 @@ sub render {
         
         ##better error handling
         if (DEBUG && $@){
-            die Dumper {
+            die {
                 content => $self->{current}->{content},
                 file => $self->{current}->{file},
                 pos => $self->{current}->{pos},
-                msg => $@
+                message => $@
             }
         }
     }
@@ -235,7 +228,6 @@ sub render {
 }
 
 sub _varsFromPrint {
-    
     my $self = shift;
     my $data = shift;
     $data =~ s/\n\s*//g;
@@ -261,9 +253,7 @@ sub _varsFromPrint {
 sub loadMatches {
     my $self = shift;
     my $file = shift;
-    
     my $temp = $self->load($file);
-    
     if (my $layout = $self->{layout}){
         $layout = $self->load($layout);
         $layout =~ s/\{\{ main \}\}/$temp/g;
@@ -271,29 +261,21 @@ sub loadMatches {
     }
     
     $self->{temp} = $temp;
-    
     return ref $self->{matches} eq 'ARRAY' ? @{$self->{matches}} : ();
-    
-    return @{$self->{matches}};
 }
 
-
 sub load {
-    
     my ($self,$file) = @_;
     my ($data);
-    local $/;
-    
     $file = $self->{path}."/$file";
     
     if (open(my $fh,'<',$file)) {
-        #binmode $fh,":utf8";
-        $data = <$fh>;
+        $data = do { local $/; <$fh> };
         close($fh);
+        $data = Encode::decode_utf8($data);
         
         my @files;
         $data =~ s/$MAIN/{{ main }}/g;
-        
         my $counter = 0;
         while (my ($settings,$include,$process,$code,$var) = $data =~ m{$SETTINGS|$INCLUDE|$PROCESS|$CODE|$VAR}){
             $counter++;
@@ -303,7 +285,6 @@ sub load {
             
             my $length = $+[0] - $-[0];
             my $start = $-[0];
-            
             if ($code || $var){
                 my $content = $code || $var;
                 push @{$self->{matches}},{
@@ -339,66 +320,10 @@ sub load {
     }
 }
 
-
-sub loadx {
-    
-    my ($self,$file) = @_;
-    my ($data);
-    local $/;
-    
-    $file = $self->{path}."/$file";
-    
-    if (open(my $fh,'<',$file)) {
-        $data = <$fh>;
-        close($fh);
-        
-        my @files;
-        $data =~ s/$MAIN/{{ main }}/g;
-        while ($data =~ s{$SETTINGS}{ { $self->settings($1) }}e){};
-        while ($data =~ s{$PROCESS}{ { $self->load($1) }}e){};
-        while ($data =~ s{$INCLUDE}{ { '{{% INC %}}' }}e){
-            push @files,$1;
-        };
-        
-        my $counter = 0;
-        while (my ($m1,$m2) = $data =~ m{$CODE|$VAR}){
-            $counter++;
-            if ($counter > 10000){
-                #die "recrusive loop";
-            }
-            
-            my $length = $+[0] - $-[0];
-            my $start = $-[0];
-            
-            my $content = $m1 || $m2;
-            push @{$self->{matches}},{
-                index => ++$self->{i},
-                content => $content,
-                start => $start,
-                from => $m1 ? 'CODE' : 'VAR',
-                file => $file
-            };
-            substr ($data,$start,$length,"{{ $self->{i} }}");
-        }
-        
-        foreach my $f (@files){
-            $data =~ s{\{\{% INC %\}\}}{ { $self->load($f) }}e;
-        }
-        
-        return $data;
-    }
-    
-    else {
-        croak "Can't open file $file: $!";
-    }
-}
-
-
 sub settings {
     my $self = shift;
     my $settings = shift;
     my @settings = split "\n",$settings;
-    #die Dumper \@settings;
     map {
         my ($m,$m2) = $_ =~ m/\s*(.*?)\s*:\s*(.*)\s*/g;
         if ($m){
@@ -409,7 +334,6 @@ sub settings {
             }
         }
     } @settings;
-    
     return '';
 }
 
@@ -420,12 +344,11 @@ sub pushData {
 }
 
 sub setVar {
-    
     my $self = shift;
     my $content = shift;
     my $eval = shift;
     my $local = shift;
-
+    
     my $perl = '';
     my ($var,$val) = $content =~ m/\s*((?:\.*\w+(?:\(.*?\))*)+)(?:\s*=\s*(.*))*/;
 
@@ -454,7 +377,6 @@ sub getVar {
         return $var;
     }
     
-    #my @sp = split(/((\.*\w+(\(.*?\))*)+)/,$var);
     my @sp;
     my $newsp;
     while ($var =~ s/(?: (?: (\w+(?:\(.*?\))*) | \.(\(.*?\)) )  )//x){
@@ -477,12 +399,9 @@ sub toHTML {
     return join '', @{$self->{data}};
 }
 
-
 package Cake::View::Object;
-
 
 1;
 
 __END__
-
 

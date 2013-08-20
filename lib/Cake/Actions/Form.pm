@@ -89,8 +89,6 @@ sub errors {
     return @{$self->{_errorMsgs}};
 }
 
-
 1;
-
 
 __END__

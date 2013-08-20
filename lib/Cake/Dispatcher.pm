@@ -54,12 +54,10 @@ sub dispatch {
 ##match sequence
 ## 1) direct paths - 2) paths with defined arguments - 3) chained - 4) regex
 sub match {
-    
     my $self = shift;
     my $path = shift || $self->path;
     
     $self->log("Start Searching For $path path");
-    
     my $method = $self->method;
     my $dispatch = $self->dispatcher;
     my $match;
@@ -108,10 +106,7 @@ sub match {
         }
         
         if ($self->{chain_action}){
-            
-            #die Dumper $self->{chain_action};
             my @chain = @{$self->{chain_action}};
-            
             my $lastaction = pop @chain;
             
             for my $action (@chain){
@@ -127,16 +122,12 @@ sub match {
     
     $self->log("4- Trying Regex Match");
     if ($dispatch->{regex}){
-        
         my $oldstrength = '';
         my $match;
         
         foreach my $this (@{$dispatch->{regex}}){
-            
             if ($path =~ m/$this->{regex}/){
-                
                 next if (!grep(/$method/,@{$this->{methods}}));
-                
                 ###select the strongest
                 my $localpath = $path; $localpath =~ s/$this->{regex}//;
                 my $strength = length $localpath;
@@ -148,7 +139,6 @@ sub match {
                 $oldstrength = $strength;
                 #return;
             }
-            
         }
         
         if ($match){
@@ -171,9 +161,7 @@ sub match {
     }
 }
 
-
 sub _loop_chains {
-    
     my $self = shift;
     my $path = shift;
     my $dir = shift;
@@ -195,9 +183,7 @@ sub _loop_chains {
         $regex = qr{^$route(.*?)$};
     }
     
-    
     if (my ($newpath) = $path =~ m#$regex#){
-        
         my $match = $dispatch->{$thisChain->{path}}->{$self->method}
         or return 1;
         
@@ -237,7 +223,6 @@ sub _loop_chains {
 
 
 sub addAction {
-    
     my $self = shift;
     my $match = shift;
     my $type = shift;
@@ -265,9 +250,9 @@ sub addAction {
     if ($self->debug && @captures){
         $self->log(sub {
             my $msg = '';
-            $msg .= "+++++++++++++++++\n";
+            $msg .= "=================\n";
             $msg .= "  Captured Args  \n";
-            $msg .= "+++++++++++++++++\n";
+            $msg .= "=================\n";
             foreach my $arg (@captures){
                 $msg .= $arg."\n";
             }
@@ -303,19 +288,15 @@ sub execute {
 sub _get_code {
     my $controller = shift;
     my $method = shift;
-    
     ###convert method to CODE ref
     if (ref $method ne 'CODE'){
         $method = $controller.'::'.$method;
         $method = \&$method;
     }
-    
     return $method;
 }
-
 
 1;
 
 __END__
-
 

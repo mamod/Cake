@@ -1,7 +1,6 @@
 package Cake::Plugins::I18N;
 use Carp;
 use Cake 'Plugin';
-my $req = {};
 my $settings = {};
 my $langs = {};
 
@@ -79,15 +78,12 @@ sub msgid {
 sub _get_lexi {
     my $package = shift;
     my $data;
-    
     open my $DATA, '<', $package
     or die "Can't open $package for input:\n$!";
     binmode $DATA,":utf8";
     $data = do { local $/;  <$DATA> };
     close $DATA;
-    
     $data =~ s/(\w+["'])[\r\n]/$1;\n/g;
-    
     eval "$data";
     return %hash;
 }

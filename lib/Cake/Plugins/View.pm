@@ -19,14 +19,11 @@ sub template {
     return $template;
 }
 
-
 sub render {
     my $self = $_[0];
     my $temp = &_render_template(@_);
-    $self->body($temp);
+    $self->body(Encode::encode('UTF-8',$temp));
 }
-
-
 
 sub _render_template {
     
@@ -34,6 +31,7 @@ sub _render_template {
     my $file = shift;
     my $vars = shift;
     $vars = {} if !$vars;
+    
     ###stash pass as default with Cake object as c
     $vars = {%{$self->stash},%{$vars},c=>$self};
     my $temp;
@@ -46,16 +44,29 @@ sub _render_template {
     
     if ($@){
         my $error = $@;
-        die $error;
-        die ({
-            message => $error->{msg},
-            custom => $error->{content},
-            file => $error->{file}
-        });
+        ##get message & line number
+        my ($msg,$l) = ($error->{message} =~ /(.*?) at .*? line (\d+)/);
+        
+        open my $fh, '<', $error->{file};
+        read $fh, my $buf, $error->{pos}+1;
+        close $fh;
+        
+        #count number of lines
+        my @lines = split /\n/,$buf;
+        my $line = scalar @lines + ($l-1);
+        die {
+            caller => [
+                __PACKAGE__,
+                $error->{file},
+                $line
+            ],
+            file => $error->{file},
+            pos => $error->{pos},
+            message => $msg
+        }
     }
     return $temp;
 }
-
 
 sub layout {
     my $self = shift;
@@ -63,7 +74,6 @@ sub layout {
     template->{layout} = $layout;
     return $self;
 }
-
 
 register();
 
@@ -116,8 +126,7 @@ head1 SYNOPSIS
     #home.tmp
     Welcome Home [% first_name %] [% last_name %]
     
-    
 head1 ALSO SEE
 
-For more information about template rendering please see Cake::View::TT;
+For more information about template rendering please see <L>Cake::View::TT</L>;
 

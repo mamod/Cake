@@ -34,9 +34,7 @@ sub uri_for {
 # we can add new params to the requested URL $c->get_full_url({param=> value ...});
 #=============================================================================
 sub uri_with {
-    
     my $self = shift;
-    
     ##localize params
     local $self->{params};
     for (@_){
@@ -53,9 +51,7 @@ sub uri_with {
 # get current full url
 #=============================================================================
 sub get_full_url {
-    
     my $self = shift;
-    
     my $path = '';
     my $params = {};
     my $url = $self->base;
@@ -63,7 +59,6 @@ sub get_full_url {
     if (!ref $_[0]){
         
         $path = shift;
-        
         ##if request url has script name keep it
         my $script = $self->env->{SCRIPT_NAME};
         if ($self->env->{REQUEST_URI} =~ m/^$script/){
@@ -105,11 +100,9 @@ sub get_full_url {
     return $url;
 }
 
-
 sub subdomain {
     my $self = shift;
     return $self->{'subdomain'} if $self->{'subdomain'};
-    
     ###parse sub domains
     my $host = $self->host;
     

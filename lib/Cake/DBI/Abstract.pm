@@ -353,7 +353,6 @@ sub limit {
 # Set/Get order : 
 #==============================================================================
 sub order {
-    
     my ($self,$val) = @_;
     if ($val){
         croak 'order method only accepts hashref' if ref $val ne 'HASH'; 
@@ -362,9 +361,7 @@ sub order {
     }
     
     else {
-        
         return undef if !$self->{order};
-        
         if ($self->{order}->{by}){
             my $order = $self->{order}->{by};
             $order .= ' '.$self->{order}->{type} if $self->{order}->{type};
@@ -413,7 +410,6 @@ sub query {
     
     my $self = shift;
     my $set = shift;
-    
     my $literal = delete $self->{_literal};
     return @{$literal} if $literal;
     ##make sure to reset binds
@@ -425,8 +421,6 @@ sub query {
         $self->from(@{$set->{from}}) if $set->{from};
         return $self;
     }
-    
-    
     
     my $select = $self->_select;
     my $from = $self->_from;

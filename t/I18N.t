@@ -3,6 +3,7 @@ use Test::More;
 use Cake;
 use bytes;
 use Encode;
+use utf8;
 use FindBin qw($Bin);
 
 plugins [
@@ -50,7 +51,7 @@ App->bake()->serve(sub {
     my $octets = encode("utf8", "مرحبا");
     #diag $octets;
     
-    like(encode("utf8", $bd), qr/$octets/,'I18N Arabic match in Template');
+    like($bd, qr/$octets/,'I18N Arabic match in Template');
 
     ##tests from sub folders
     

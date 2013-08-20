@@ -5,13 +5,11 @@ use Data::Dumper;
 
 our @CARP_NOT;
 use base 'Exporter';
-
 our @EXPORT = qw(
     error
     log
     warn
 );
-
 
 ##For quick testing
 BEGIN {
@@ -24,17 +22,13 @@ sub trapper {
 
 print STDOUT <<END;
 Content-Type: text/html
-
-Dumper $message
-
+$message
 END
 }
-
 
 ## die nicely just to detach the flow sequence of Cake action
 ## and not a real die
 my $kill_nicely = 0;
-
 sub Mercy_Killing {
     my $c = shift;
     $kill_nicely = 1;
@@ -72,7 +66,6 @@ sub error {
     return 1;
 }
 
-
 sub log {
     my $self = shift;
     if (@_ > 1){
@@ -82,7 +75,6 @@ sub log {
     }
     return 1;
 }
-
 
 sub warn {
     my $self = shift;
@@ -153,9 +145,9 @@ sub backtrace {
         else {
             my $thisline = $lines[$l];
             
-            #if ($thisline =~ m/^\s*#/){
-            #    $thisline = '<i>'.$thisline.'</i>';
-            #}
+            if ($thisline =~ m/^\s*#/){
+                $thisline = '<i>'.$thisline.'</i>';
+            }
             
             $backtrace
               .= qq|<span class="nu">|
@@ -165,20 +157,16 @@ sub backtrace {
         }
     }
     $backtrace .= "</pre>";
-
-
     return $backtrace;
 }
 
 sub _html_encode {
     my $value = shift;
-
     $value =~ s/&/&amp;/g;
     $value =~ s/</&lt;/g;
     $value =~ s/>/&gt;/g;
     $value =~ s/'/&#39;/g;
     $value =~ s/"/&quot;/g;
-
     return $value;
 }
 
@@ -189,7 +177,4 @@ sub tabulate {
     return " $number";
 }
 
-
 1;
-
-

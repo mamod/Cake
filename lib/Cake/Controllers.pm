@@ -15,7 +15,6 @@ my @methods = ('get','post','delete','put');
 sub dispatcher {$dispatch}
 sub auto_chain {$auto_chain}
 
-
 ##returns last added controller action
 sub Action { return shift->{lastAction}; }
 sub Path { return shift->{path}; }
@@ -23,11 +22,9 @@ sub Path { return shift->{path}; }
 # FIXME::: Not sure what should be fixed here
 #----------------------------------------------------------------------------
 sub dispatch {
-    
     my $self = shift;
     my $type = shift;
     my $path = shift;
-    
     my @types = ($type);
     
     if (ref $path eq 'ARRAY'){
@@ -46,7 +43,6 @@ sub dispatch {
     
     ##redifine whole sub
     if ($type eq 'route'){
-        
         my $hash = $code;
         my $controller = $hash->{controller} || '+'.$caller;
         $code = $hash->{action};
@@ -59,7 +55,6 @@ sub dispatch {
         }
         
         else {$controller = $caller.'::Controllers::'.$controller;}
-        
         ##require if not in controller folder
         if ($controller !~ /(Controllers::|Plugins::)/i){            
             my $req = $controller.'.pm';
@@ -78,7 +73,6 @@ sub dispatch {
     } else {
         
         ($namespace) = $caller =~ m/Controllers(::.*)$/;
-        
         if ($namespace){
             $namespace =~ s/::/\//g;
             $abs_path = lc($namespace.'/');
@@ -90,7 +84,6 @@ sub dispatch {
         $abs_path =~ s/\/$//;
     }
     
-    
     local $dispatch->{lastAction} = {
         code => $code,
         line => $line,
@@ -99,7 +92,6 @@ sub dispatch {
         namespace => $namespace || '',
         path => $abs_path
     };
-    
     
     ###if there is another rules left, process them
     ### accept ref code
@@ -119,10 +111,8 @@ sub dispatch {
             action => $dispatch->{lastAction}
         });
     } else {
-        
         my $actions;
         my $first_method = '';
-        
         #one reference for all methods
         foreach my $method (@types){
             if ($actions->{$first_method}){
@@ -142,7 +132,6 @@ sub dispatch {
 }
 
 sub auto {
-    
     my $self = shift;
     my $code = pop(@_);
     my ($caller, $script, $line) = caller(1);

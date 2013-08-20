@@ -173,6 +173,13 @@ my $MIME_TYPES = {
 
 my $time = time();
 
+
+use Data::Dumper;
+sub sendFile {
+    my $self = shift;
+    print Dumper $self;
+}
+
 sub setup {
     
     my $self = shift;
@@ -203,13 +210,11 @@ sub setup {
         my $data = '';
         
         #open file
-        if (open(my $fh,'<',$file)){
+        if (open my $fh,'<',$file ){
             binmode $fh;
             $data = do { local $/; <$fh> };
             close($fh);
-        }
-        
-        if ($@){
+        } else {
             $self->content_type('text/plain');
             $self->status_code('404');
             $self->body('File Doesn\'t Exists');

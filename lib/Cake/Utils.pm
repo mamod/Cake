@@ -4,7 +4,6 @@ use strict;
 use Carp;
 use Cake::Utils::Serializer;
 use base 'Exporter';
-
 our @EXPORT = qw(
     run_once
     get_file
@@ -71,7 +70,6 @@ my %StatusCode = (
     509 => 'Bandwidth Limit Exceeded',        # unofficial
     510 => 'Not Extended',                    # RFC 2774
 );
-
 
 =head2 get_file
 
@@ -146,21 +144,18 @@ sub content_length {
     }
     return;
 }
+
 #============================================================================
 # Require & noRequire
 #============================================================================
-
 sub Require {
     return noRequire(@_,'Require');
 }
 
-
 sub noRequire {
-    
     my $class = shift;
     my $namespace = shift;
     my $require = shift;
-    
     if ($namespace){
         unless ($class =~ s/^\+//){
             $class = $namespace.'::'.$class;
@@ -183,7 +178,6 @@ sub noRequire {
 
 
 sub get_status_code {
-    
     my $env = shift;
     my $message = $StatusCode{$_[0]};
     
@@ -215,7 +209,6 @@ convert predefined values to Unix machine time
 =cut
 
 sub to_epoch {
-    
     my $length = shift || '1h'; ##one hour is the default value
     my $types = {
         'm' => sub {return 60*$_[0]},  ##minute
@@ -226,11 +219,8 @@ sub to_epoch {
     };
     
     my ($num,$type) = $length =~ /(\d*)(\w)/;
-    
     $num = 1 if !$num;
-    
     my $expire;
-    
     if ($types->{$type}){
         $expire = $types->{$type}->($num);
     }
@@ -249,7 +239,6 @@ sub crlf {
     #return "\n";
     my ( $self, $CRLF ) = @_;
     $self->{'app.crlf'} = $CRLF if $CRLF;    # allow value to be set manually
-    
     unless ( $self->{'app.crlf'} ) {
       my $OS = $^O;
       $self->{'app.crlf'}
@@ -259,7 +248,6 @@ sub crlf {
     }
     
     return $self->{'app.crlf'};
-    
 }
 
 #============================================================================
@@ -305,3 +293,5 @@ sub run_once {
 }
 
 1;
+
+__END__

@@ -140,7 +140,7 @@ sub _get_path_and_file {
     
     
     my $cache_root = $self->{cache_root};
-    $cache_root .= '/'.$subfolder if $subfolder;
+    $cache_root .= '/' . $subfolder if $subfolder;
     #my $x = File::Spec->catfile(@deep, $file);
     my $path = join('/',$cache_root,@deep);
     return ($path,$file);

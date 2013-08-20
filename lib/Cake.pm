@@ -16,7 +16,7 @@ use Cake::URI;
 use base qw/Exporter Cake::Dispatcher Cake::Engine/;
 use FindBin qw($Bin);
 
-our $VERSION = '0.006';
+our $VERSION = '0.006_2';
 
 my @controller_export = qw(
     get
@@ -514,7 +514,6 @@ sub body {
         } else {
             #truncates and open for reading and writing
             open($body, "+>", undef);
-            binmode $body,":utf8";
             $body->write($content);
         }
         

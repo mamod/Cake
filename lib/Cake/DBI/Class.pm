@@ -38,6 +38,8 @@ sub begin_work {
     $self->dbh->begin_work;
 }
 
+
+
 sub _dbi {
     
     my ($self,$query,$values,$type) = @_;
